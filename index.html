@@ -12,161 +12,166 @@
     
     <style>
         :root { 
-            --bg: #0f172a; --surface: #1e293b; --primary: #3b82f6; 
-            --success: #10b981; --danger: #ef4444; --text: #f8fafc; --muted: #94a3b8;
-            --line: #334155;
+            --bg: #f8fafc; --surface: #ffffff; --primary: #3b82f6; 
+            --success: #10b981; --danger: #ef4444; --text: #1e293b; --muted: #64748b;
+            --line: #e2e8f0; --nav: #ffffff;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
-        body { background: var(--bg); color: var(--text); padding-bottom: 90px; }
-        
-        #loginScreen { max-width: 400px; margin: 80px auto; padding: 30px; background: var(--surface); border-radius: 24px; border: 1px solid var(--line); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        
-        .main-header { padding: 30px 20px; background: linear-gradient(180deg, #1e40af, #0f172a); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: flex-start; }
-        .balance-label { font-size: 12px; text-transform: uppercase; color: var(--muted); letter-spacing: 1px; }
-        .balance-main { font-size: 36px; font-weight: 800; margin: 5px 0; }
-        .sync-badge { background: var(--success); padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }
 
-        .container { padding: 15px; max-width: 700px; margin: 0 auto; }
-        .card { background: var(--surface); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--line); }
+        [data-theme="dark"] {
+            --bg: #0f172a; --surface: #1e293b; --text: #f8fafc; --muted: #94a3b8;
+            --line: #334155; --nav: #1e293b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; transition: background 0.3s, color 0.3s; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 90px; min-height: 100vh; }
+        
+        /* Switch de Tema */
+        .theme-switch { position: fixed; top: 20px; right: 20px; z-index: 1001; background: var(--surface); border: 1px solid var(--line); padding: 8px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+
+        #loginScreen { max-width: 400px; margin: 60px auto; padding: 30px; background: var(--surface); border-radius: 24px; border: 1px solid var(--line); }
+        .main-header { padding: 40px 20px; background: linear-gradient(135deg, #1e40af, #3b82f6); color: white; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; }
+        
+        .container { padding: 15px; max-width: 600px; margin: 0 auto; }
+        .card { background: var(--surface); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.3s; }
-        input, select { width: 100%; padding: 14px; border-radius: 12px; background: #0f172a; border: 1px solid var(--line); color: white; font-size: 16px; margin-bottom: 10px; }
-        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        input, select { width: 100%; padding: 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); color: var(--text); font-size: 16px; margin-bottom: 12px; -webkit-appearance: none; }
+        
+        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-danger { background: var(--danger); color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+        .btn-small-del { background: #fee2e2; color: #dc2626; padding: 5px 10px; border-radius: 8px; font-size: 12px; border: none; cursor: pointer; }
 
         .bank-item { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid var(--line); }
-        .bank-info { display: flex; align-items: center; gap: 15px; }
-        .bank-icon { width: 40px; height: 40px; border-radius: 10px; background: white; object-fit: contain; padding: 5px; }
+        .bank-info { display: flex; align-items: center; gap: 12px; }
+        .bank-icon { width: 35px; height: 35px; border-radius: 8px; background: white; padding: 4px; border: 1px solid #eee; }
         
-        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 12px; border-top: 1px solid var(--line); z-index: 1000; }
-        .nav-item { border: none; background: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; cursor: pointer; flex: 1; }
-        .nav-item.active { color: var(--primary); }
-        .nav-item span { font-size: 20px; }
+        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--nav); display: flex; justify-content: space-around; padding: 12px; border-top: 1px solid var(--line); z-index: 1000; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+        .nav-item { border: none; background: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; flex: 1; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+        .nav-item span { font-size: 22px; }
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
+    <button class="theme-switch" onclick="toggleTheme()" id="themeBtn">🌙</button>
+
     <div id="loginScreen">
-        <h2 style="text-align: center; margin-bottom: 25px;">🔒 Acceso Seguro</h2>
+        <h2 style="text-align: center; margin-bottom: 25px;">🔒 TandaBank</h2>
         <input type="email" id="logEmail" placeholder="Correo electrónico">
         <input type="password" id="logPass" placeholder="Contraseña">
-        
-        <button onclick="handleLogin()" class="btn btn-primary" style="margin-bottom: 10px;">Iniciar Sesión</button>
-        
-        <p style="text-align: center; margin-bottom: 15px;">
-            <a href="#" onclick="recuperarContrasena()" style="color: var(--muted); font-size: 13px; text-decoration: none;">¿Olvidaste tu contraseña?</a>
-        </p>
-        
-        <button onclick="handleRegistro()" class="btn btn-outline">Crear Cuenta Nueva</button>
+        <button onclick="handleLogin()" class="btn btn-primary" style="margin-bottom: 10px;">Entrar</button>
+        <p style="text-align: center; margin-bottom: 15px;"><a href="#" onclick="recuperarContrasena()" style="color: var(--muted); font-size: 13px; text-decoration: none;">¿Olvidaste tu contraseña?</a></p>
+        <button onclick="handleRegistro()" class="btn btn-outline">Registrarse</button>
     </div>
 
     <div id="appDashboard" style="display: none;">
         <header class="main-header">
-            <div>
-                <p class="balance-label">Patrimonio Neto</p>
-                <h1 class="balance-main" id="valPatrimonio">$0.00</h1>
-                <div style="display: flex; gap: 20px;">
-                    <div><small style="color:var(--success)">Tengo:</small> <p id="valTengo">$0.00</p></div>
-                    <div><small style="color:var(--danger)">Debo:</small> <p id="valDebo">$0.00</p></div>
+            <div class="container">
+                <p style="opacity: 0.8; font-size: 13px;">PATRIMONIO NETO</p>
+                <h1 id="valPatrimonio" style="font-size: 32px; margin: 5px 0;">$0.00</h1>
+                <div style="display: flex; gap: 25px; margin-top: 10px;">
+                    <div><small>Activos:</small> <p id="valTengo" style="font-weight: bold;">$0.00</p></div>
+                    <div><small>Deudas:</small> <p id="valDebo" style="font-weight: bold;">$0.00</p></div>
                 </div>
             </div>
-            <div id="syncBadge" class="sync-badge">Sincronizado</div>
         </header>
 
         <main class="container">
             <section id="tab-resumen" class="tab-content active">
                 <div class="card">
-                    <h3>Gastos por Categoría</h3>
-                    <canvas id="chartGastos" style="max-height: 250px;"></canvas>
+                    <h3 style="margin-bottom: 15px;">Gastos</h3>
+                    <canvas id="chartGastos" style="max-height: 200px;"></canvas>
                 </div>
                 <div class="card" id="listaHomeCuentas"></div>
             </section>
 
             <section id="tab-ingresos" class="tab-content">
                 <div class="card">
-                    <h3>Registrar Ingreso</h3>
+                    <h3>Registrar Ingreso</h3><br>
                     <form onsubmit="handleIngreso(event)">
-                        <input type="number" id="inMonto" placeholder="Cantidad ($)" required step="0.01">
+                        <input type="number" id="inMonto" placeholder="Monto" required step="0.01">
                         <select id="inCuenta" class="sel-debito"></select>
                         <input type="date" id="inFecha" required>
-                        <button type="submit" class="btn btn-primary">Guardar Ingreso</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
                     </form>
                 </div>
             </section>
 
             <section id="tab-traspasos" class="tab-content">
                 <div class="card">
-                    <h3>Traspaso entre Cuentas</h3>
+                    <h3>Traspaso o Pago de Tarjeta</h3><br>
                     <form onsubmit="handleTraspaso(event)">
+                        <label style="font-size: 12px; color: var(--muted);">Desde:</label>
                         <select id="trOrigen" class="sel-todas"></select>
+                        <label style="font-size: 12px; color: var(--muted);">Hacia:</label>
                         <select id="trDestino" class="sel-todas"></select>
                         <input type="number" id="trMonto" placeholder="Monto" required step="0.01">
-                        <button type="submit" class="btn btn-primary">Ejecutar Traspaso</button>
+                        <button type="submit" class="btn btn-primary">Confirmar</button>
                     </form>
                 </div>
             </section>
 
             <section id="tab-gastos" class="tab-content">
                 <div class="card">
-                    <h3>Nuevo Gasto</h3>
+                    <h3>Nuevo Gasto</h3><br>
                     <form onsubmit="handleGasto(event)">
                         <input type="text" id="gaDesc" placeholder="Concepto" required>
                         <select id="gaCat">
-                            <option>Comida</option><option>Servicios</option><option>Ocio</option><option>Salud</option><option>Otros</option>
+                            <option>Comida</option><option>Servicios</option><option>Ocio</option><option>Salud</option><option>Transporte</option><option>Otros</option>
                         </select>
                         <input type="number" id="gaMonto" placeholder="Monto" required step="0.01">
                         <select id="gaFuente" class="sel-todas"></select>
-                        <button type="submit" class="btn btn-primary">Registrar Gasto</button>
+                        <button type="submit" class="btn btn-primary">Registrar</button>
                     </form>
                 </div>
             </section>
 
             <section id="tab-cuentas" class="tab-content">
                 <div class="card">
-                    <h3>Nueva Cuenta o Tarjeta</h3>
+                    <h3>Añadir Cuenta</h3><br>
                     <form onsubmit="handleNuevaCuenta(event)">
-                        <input type="text" id="cuNombre" placeholder="Nombre (Ej. Santander)" required>
-                        <input type="text" id="cuWeb" placeholder="Dominio (ej: bbva.mx)">
+                        <input type="text" id="cuNombre" placeholder="Nombre Banco" required>
+                        <input type="text" id="cuWeb" placeholder="dominio.com (para el logo)">
                         <select id="cuTipo">
                             <option value="debito">Débito / Efectivo</option>
                             <option value="credito">Tarjeta de Crédito</option>
                         </select>
-                        <input type="number" id="cuSaldo" placeholder="Saldo inicial" required step="0.01">
-                        <button type="submit" class="btn btn-primary">Dar de Alta</button>
+                        <input type="number" id="cuSaldo" placeholder="Saldo actual" required step="0.01">
+                        <button type="submit" class="btn btn-primary">Crear</button>
                     </form>
                 </div>
                 <div class="card">
                     <div id="listaMaestraCuentas"></div>
-                    <button onclick="handleLogout()" class="btn btn-danger" style="margin-top: 20px;">Cerrar Sesión</button>
+                    <button onclick="handleLogout()" class="btn btn-outline" style="margin-top: 25px; color: var(--danger);">Cerrar Sesión</button>
                 </div>
             </section>
         </main>
 
         <nav class="nav-bar">
-            <button class="nav-item active" onclick="cambiarTab('resumen', this)"><span>📊</span>Resumen</button>
-            <button class="nav-item" onclick="cambiarTab('ingresos', this)"><span>💰</span>Ingreso</button>
-            <button class="nav-item" onclick="cambiarTab('traspasos', this)"><span>🔄</span>Traspaso</button>
+            <button class="nav-item active" onclick="cambiarTab('resumen', this)"><span>🏠</span>Inicio</button>
+            <button class="nav-item" onclick="cambiarTab('ingresos', this)"><span>➕</span>Ingreso</button>
+            <button class="nav-item" onclick="cambiarTab('traspasos', this)"><span>🔄</span>Pago</button>
             <button class="nav-item" onclick="cambiarTab('gastos', this)"><span>💸</span>Gasto</button>
             <button class="nav-item" onclick="cambiarTab('cuentas', this)"><span>🏦</span>Cuentas</button>
         </nav>
     </div>
 
     <script>
-        // --- PEGA TUS CREDENCIALES AQUÍ ---
+        // --- CONFIGURACIÓN ---
         const firebaseConfig = {
-    apiKey: "AIzaSyD86xvnjFFHkdMhvHPOkYUn8_PdHgNOEK0",
-    authDomain: "misuperappfinanciera.firebaseapp.com",
-    databaseURL: "https://misuperappfinanciera-default-rtdb.firebaseio.com",
-    projectId: "misuperappfinanciera",
-    storageBucket: "misuperappfinanciera.firebasestorage.app",
-    messagingSenderId: "320368053330",
-    appId: "1:320368053330:web:c85ec9a1108be81617a38b"
-    };
+            apiKey: "AIzaSyD86xvnjFFHkdMhvHPOkYUn8_PdHgNOEK0",
+            authDomain: "misuperappfinanciera.firebaseapp.com",
+            databaseURL: "https://misuperappfinanciera-default-rtdb.firebaseio.com",
+            projectId: "misuperappfinanciera",
+            storageBucket: "misuperappfinanciera.firebasestorage.app",
+            messagingSenderId: "320368053330",
+            appId: "1:320368053330:web:c85ec9a1108be81617a38b"
+            };
 
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
@@ -174,12 +179,26 @@
         let state = { cuentas: [], transacciones: [] };
         let chartInstance = null;
 
+        // --- TEMA ADAPTATIVO ---
+        function toggleTheme() {
+            const current = document.body.getAttribute('data-theme');
+            const target = current === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', target);
+            document.getElementById('themeBtn').innerText = target === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('theme', target);
+        }
+
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.body.setAttribute('data-theme', savedTheme);
+        document.getElementById('themeBtn').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        // --- LÓGICA FIREBASE ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('appDashboard').style.display = 'block';
                 db.ref('Usuarios/' + user.uid).on('value', snap => {
-                    const data = snap.val() || { cuentas: {}, transacciones: {} };
+                    const data = snap.val() || {};
                     state.cuentas = data.cuentas ? Object.values(data.cuentas) : [];
                     state.transacciones = data.transacciones ? Object.values(data.transacciones) : [];
                     renderAll();
@@ -191,26 +210,19 @@
         });
 
         function handleLogin() {
-            auth.signInWithEmailAndPassword(document.getElementById('logEmail').value, document.getElementById('logPass').value)
-                .catch(err => alert(err.message));
+            auth.signInWithEmailAndPassword(document.getElementById('logEmail').value, document.getElementById('logPass').value).catch(err => alert(err.message));
         }
-
         function handleRegistro() {
-            auth.createUserWithEmailAndPassword(document.getElementById('logEmail').value, document.getElementById('logPass').value)
-                .then(() => alert("Cuenta creada exitosamente."))
-                .catch(err => alert(err.message));
+            auth.createUserWithEmailAndPassword(document.getElementById('logEmail').value, document.getElementById('logPass').value).catch(err => alert(err.message));
         }
-
         function recuperarContrasena() {
             const email = document.getElementById('logEmail').value;
-            if (!email) return alert("Ingresa tu correo primero.");
-            auth.sendPasswordResetEmail(email)
-                .then(() => alert("Correo de recuperación enviado."))
-                .catch(err => alert(err.message));
+            if(!email) return alert("Escribe tu correo");
+            auth.sendPasswordResetEmail(email).then(() => alert("Correo enviado")).catch(err => alert(err.message));
         }
-
         function handleLogout() { auth.signOut(); }
 
+        // --- FINANZAS ---
         function handleNuevaCuenta(e) {
             e.preventDefault();
             const id = Date.now();
@@ -225,13 +237,19 @@
             e.target.reset();
         }
 
+        function eliminarCuenta(id) {
+            if(confirm("¿Eliminar esta cuenta? Los saldos cambiarán.")) {
+                db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${id}`).remove();
+            }
+        }
+
         function handleIngreso(e) {
             e.preventDefault();
             const m = parseFloat(document.getElementById('inMonto').value);
             const idCta = document.getElementById('inCuenta').value;
             const cta = state.cuentas.find(c => c.id == idCta);
             db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${idCta}/saldo`).set(cta.saldo + m);
-            db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push({ tipo: 'ingreso', monto: m, fecha: document.getElementById('inFecha').value });
+            db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push({ tipo: 'ingreso', monto: m, cat: 'Sueldo' });
             e.target.reset();
         }
 
@@ -251,6 +269,12 @@
             const m = parseFloat(document.getElementById('trMonto').value);
             const or = state.cuentas.find(c => c.id == document.getElementById('trOrigen').value);
             const des = state.cuentas.find(c => c.id == document.getElementById('trDestino').value);
+            
+            // Si el destino es crédito, se guarda como gasto (pago de tarjeta)
+            if(des.tipo === 'credito') {
+                db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push({ tipo: 'gasto', monto: m, cat: 'Pago Tarjeta' });
+            }
+
             db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${or.id}/saldo`).set(or.saldo - m);
             db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${des.id}/saldo`).set(des.tipo === 'credito' ? des.saldo - m : des.saldo + m);
             e.target.reset();
@@ -266,7 +290,10 @@
                 c.tipo === 'debito' ? tengo += c.saldo : debo += c.saldo;
                 return `<div class="bank-item">
                     <div class="bank-info"><img src="${c.icon}" class="bank-icon"><div><b>${c.nombre}</b></div></div>
-                    <div style="text-align:right"><b style="color:${c.tipo==='debito'?'#10b981':'#ef4444'}">$${c.saldo.toLocaleString()}</b></div>
+                    <div style="text-align:right">
+                        <b style="color:${c.tipo==='debito'?'var(--success)':'var(--danger)'}">$${c.saldo.toLocaleString()}</b><br>
+                        <button onclick="eliminarCuenta(${c.id})" class="btn-small-del">Borrar</button>
+                    </div>
                 </div>`;
             }).join('');
 
@@ -282,7 +309,7 @@
             const cats = {};
             state.transacciones.filter(t => t.tipo === 'gasto').forEach(t => cats[t.cat] = (cats[t.cat] || 0) + t.monto);
             if(chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx, { type:'doughnut', data:{ labels:Object.keys(cats), datasets:[{data:Object.values(cats), backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'], borderWidth:0}] }, options:{ plugins:{legend:{position:'bottom', labels:{color:'#94a3b8'}}}}});
+            chartInstance = new Chart(ctx, { type:'doughnut', data:{ labels:Object.keys(cats), datasets:[{data:Object.values(cats), backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'], borderWidth:2, borderColor:'rgba(0,0,0,0.1)'}] }, options:{ plugins:{legend:{position:'bottom', labels:{color:'gray', font:{size:10}}}}}});
         }
 
         function cambiarTab(id, btn) {
