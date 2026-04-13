@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TandaBank | Súper App Financiera</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    
+    <style>
+        :root { 
+            --bg: #0f172a; --surface: #1e293b; --primary: #3b82f6; 
+            --success: #10b981; --danger: #ef4444; --text: #f8fafc; --muted: #94a3b8;
+            --line: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 90px; }
+        
+        /* Login Screen */
+        #loginScreen { max-width: 400px; margin: 80px auto; padding: 30px; background: var(--surface); border-radius: 24px; border: 1px solid var(--line); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        
+        /* Dashboard Header */
+        .main-header { padding: 30px 20px; background: linear-gradient(180deg, #1e40af, #0f172a); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: flex-start; }
+        .balance-label { font-size: 12px; text-transform: uppercase; color: var(--muted); letter-spacing: 1px; }
+        .balance-main { font-size: 36px; font-weight: 800; margin: 5px 0; }
+        .sync-badge { background: var(--success); padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }
+
+        .container { padding: 15px; max-width: 700px; margin: 0 auto; }
+        .card { background: var(--surface); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--line); }
+        
+        /* Tabs e Inputs */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+        input, select { width: 100%; padding: 14px; border-radius: 12px; background: #0f172a; border: 1px solid var(--line); color: white; font-size: 16px; margin-bottom: 10px; }
+        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+
+        /* Lista de Cuentas */
+        .bank-item { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid var(--line); }
+        .bank-info { display: flex; align-items: center; gap: 15px; }
+        .bank-icon { width: 40px; height: 40px; border-radius: 10px; background: white; object-fit: contain; padding: 5px; }
+        
+        /* Barra de Navegación */
+        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 12px; border-top: 1px solid var(--line); z-index: 1000; }
+        .nav-item { border: none; background: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; cursor: pointer; flex: 1; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item span { font-size: 20px; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <h2 style="text-align: center; margin-bottom: 25px;">🔒 Acceso Seguro</h2>
+        <input type="email" id="logEmail" placeholder="Correo electrónico">
+        <input type="password" id="logPass" placeholder="Contraseña">
+        <button onclick="handleLogin()" class="btn btn-primary" style="margin-bottom: 10px;">Iniciar Sesión</button>
+        <button onclick="handleRegistro()" class="btn btn-outline">Crear Cuenta</button>
+    </div>
+
+    <div id="appDashboard" style="display: none;">
+        <header class="main-header">
+            <div>
+                <p class="balance-label">Patrimonio Neto</p>
+                <h1 class="balance-main" id="valPatrimonio">$0.00</h1>
+                <div style="display: flex; gap: 20px;">
+                    <div><small style="color:var(--success)">Tengo:</small> <p id="valTengo">$0.00</p></div>
+                    <div><small style="color:var(--danger)">Debo:</small> <p id="valDebo">$0.00</p></div>
+                </div>
+            </div>
+            <div id="syncBadge" class="sync-badge">Conectado</div>
+        </header>
+
+        <main class="container">
+            <section id="tab-resumen" class="tab-content active">
+                <div class="card">
+                    <h3>Gastos del Mes</h3>
+                    <canvas id="chartGastos" style="max-height: 250px;"></canvas>
+                </div>
+                <div class="card" id="listaHomeCuentas"></div>
+            </section>
+
+            <section id="tab-ingresos" class="tab-content">
+                <div class="card">
+                    <h3>Registrar Ingreso</h3>
+                    <form onsubmit="handleIngreso(event)">
+                        <input type="number" id="inMonto" placeholder="Cantidad ($)" required step="0.01">
+                        <select id="inCuenta" class="sel-debito"></select>
+                        <input type="date" id="inFecha" required>
+                        <button type="submit" class="btn btn-primary">Guardar Ingreso</button>
+                    </form>
+                </div>
+            </section>
+
+            <section id="tab-traspasos" class="tab-content">
+                <div class="card">
+                    <h3>Traspaso entre Cuentas</h3>
+                    <form onsubmit="handleTraspaso(event)">
+                        <label>Origen (De dónde sale):</label>
+                        <select id="trOrigen" class="sel-todas"></select>
+                        <label>Destino (A dónde va):</label>
+                        <select id="trDestino" class="sel-todas"></select>
+                        <input type="number" id="trMonto" placeholder="Monto" required step="0.01">
+                        <button type="submit" class="btn btn-primary">Ejecutar Traspaso</button>
+                    </form>
+                </div>
+            </section>
+
+            <section id="tab-gastos" class="tab-content">
+                <div class="card">
+                    <h3>Nuevo Gasto</h3>
+                    <form onsubmit="handleGasto(event)">
+                        <input type="text" id="gaDesc" placeholder="Concepto" required>
+                        <select id="gaCat">
+                            <option>Comida</option><option>Servicios</option><option>Ocio</option><option>Salud</option><option>Otros</option>
+                        </select>
+                        <input type="number" id="gaMonto" placeholder="Monto" required step="0.01">
+                        <label>Pagar con:</label>
+                        <select id="gaFuente" class="sel-todas"></select>
+                        <button type="submit" class="btn btn-primary">Registrar Gasto</button>
+                    </form>
+                </div>
+            </section>
+
+            <section id="tab-cuentas" class="tab-content">
+                <div class="card">
+                    <h3>Nueva Cuenta o Tarjeta</h3>
+                    <form onsubmit="handleNuevaCuenta(event)">
+                        <input type="text" id="cuNombre" placeholder="Nombre (Ej. Santander)" required>
+                        <input type="text" id="cuWeb" placeholder="Web (ej: bbva.mx para el logo)">
+                        <select id="cuTipo">
+                            <option value="debito">Débito / Efectivo</option>
+                            <option value="credito">Tarjeta de Crédito</option>
+                        </select>
+                        <input type="number" id="cuSaldo" placeholder="Saldo inicial" required step="0.01">
+                        <button type="submit" class="btn btn-primary">Dar de Alta</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <div id="listaMaestraCuentas"></div>
+                    <button onclick="handleLogout()" class="btn btn-danger" style="margin-top: 20px;">Cerrar Sesión</button>
+                </div>
+            </section>
+        </main>
+
+        <nav class="nav-bar">
+            <button class="nav-item active" onclick="cambiarTab('resumen', this)"><span>📊</span>Resumen</button>
+            <button class="nav-item" onclick="cambiarTab('ingresos', this)"><span>💰</span>Ingreso</button>
+            <button class="nav-item" onclick="cambiarTab('traspasos', this)"><span>🔄</span>Traspaso</button>
+            <button class="nav-item" onclick="cambiarTab('gastos', this)"><span>💸</span>Gasto</button>
+            <button class="nav-item" onclick="cambiarTab('cuentas', this)"><span>🏦</span>Cuentas</button>
+        </nav>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN FIREBASE ---
+        const firebaseConfig = {
+    apiKey: "AIzaSyD86xvnjFFHkdMhvHPOkYUn8_PdHgNOEK0",
+    authDomain: "misuperappfinanciera.firebaseapp.com",
+    databaseURL: "https://misuperappfinanciera-default-rtdb.firebaseio.com",
+    projectId: "misuperappfinanciera",
+    storageBucket: "misuperappfinanciera.firebasestorage.app",
+    messagingSenderId: "320368053330",
+    appId: "1:320368053330:web:c85ec9a1108be81617a38b"
+    };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+        let state = { cuentas: [], transacciones: [] };
+        let chartInstance = null;
+
+        // --- CONTROL DE ACCESO ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('appDashboard').style.display = 'block';
+                // Vincular datos al UID del usuario para privacidad
+                db.ref('Usuarios/' + user.uid).on('value', snap => {
+                    const data = snap.val() || { cuentas: {}, transacciones: {} };
+                    state.cuentas = data.cuentas ? Object.values(data.cuentas) : [];
+                    state.transacciones = data.transacciones ? Object.values(data.transacciones) : [];
+                    renderAll();
+                });
+            } else {
+                document.getElementById('loginScreen').style.display = 'block';
+                document.getElementById('appDashboard').style.display = 'none';
+            }
+        });
+
+        function handleLogin() {
+            auth.signInWithEmailAndPassword(document.getElementById('logEmail').value, document.getElementById('logPass').value)
+                .catch(err => alert(err.message));
+        }
+
+        function handleRegistro() {
+            auth.createUserWithEmailAndPassword(document.getElementById('logEmail').value, document.getElementById('logPass').value)
+                .then(() => alert("Cuenta creada."))
+                .catch(err => alert(err.message));
+        }
+
+        function handleLogout() { auth.signOut(); }
+
+        // --- ACCIONES FINANCIERAS ---
+        function handleNuevaCuenta(e) {
+            e.preventDefault();
+            const id = Date.now();
+            const cu = {
+                id,
+                nombre: document.getElementById('cuNombre').value,
+                tipo: document.getElementById('cuTipo').value,
+                saldo: parseFloat(document.getElementById('cuSaldo').value),
+                icon: `https://www.google.com/s2/favicons?domain=${document.getElementById('cuWeb').value}&sz=64`
+            };
+            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${id}`).set(cu);
+            e.target.reset();
+        }
+
+        function handleIngreso(e) {
+            e.preventDefault();
+            const monto = parseFloat(document.getElementById('inMonto').value);
+            const idCta = document.getElementById('inCuenta').value;
+            const cta = state.cuentas.find(c => c.id == idCta);
+            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${idCta}/saldo`).set(cta.saldo + monto);
+            db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push({ tipo: 'ingreso', monto, fecha: document.getElementById('inFecha').value });
+            e.target.reset();
+        }
+
+        function handleGasto(e) {
+            e.preventDefault();
+            const monto = parseFloat(document.getElementById('gaMonto').value);
+            const idCta = document.getElementById('gaFuente').value;
+            const cta = state.cuentas.find(c => c.id == idCta);
+            const nSaldo = cta.tipo === 'debito' ? cta.saldo - monto : cta.saldo + monto;
+            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${idCta}/saldo`).set(nSaldo);
+            db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push({ tipo: 'gasto', monto, cat: document.getElementById('gaCat').value });
+            e.target.reset();
+        }
+
+        function handleTraspaso(e) {
+            e.preventDefault();
+            const m = parseFloat(document.getElementById('trMonto').value);
+            const or = state.cuentas.find(c => c.id == document.getElementById('trOrigen').value);
+            const des = state.cuentas.find(c => c.id == document.getElementById('trDestino').value);
+            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${or.id}/saldo`).set(or.saldo - m);
+            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${des.id}/saldo`).set(des.tipo === 'credito' ? des.saldo - m : des.saldo + m);
+            e.target.reset();
+        }
+
+        // --- RENDERIZADO ---
+        function renderAll() {
+            let tengo = 0, debo = 0;
+            const options = state.cuentas.map(c => `<option value="${c.id}">${c.nombre} ($${c.saldo.toLocaleString()})</option>`).join('');
+            document.querySelectorAll('.sel-todas').forEach(s => s.innerHTML = options);
+            document.querySelectorAll('.sel-debito').forEach(s => s.innerHTML = state.cuentas.filter(c => c.tipo === 'debito').map(c => `<option value="${c.id}">${c.nombre}</option>`).join(''));
+
+            const listaHTML = state.cuentas.map(c => {
+                c.tipo === 'debito' ? tengo += c.saldo : debo += c.saldo;
+                return `<div class="bank-item">
+                    <div class="bank-info"><img src="${c.icon}" class="bank-icon"><div><b>${c.nombre}</b></div></div>
+                    <div style="text-align:right"><b style="color:${c.tipo==='debito'?'#10b981':'#ef4444'}">$${c.saldo.toLocaleString()}</b></div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('listaMaestraCuentas').innerHTML = listaHTML;
+            document.getElementById('valTengo').innerText = `$${tengo.toLocaleString()}`;
+            document.getElementById('valDebo').innerText = `$${debo.toLocaleString()}`;
+            document.getElementById('valPatrimonio').innerText = `$${(tengo - debo).toLocaleString()}`;
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('chartGastos').getContext('2d');
+            const cats = {};
+            state.transacciones.filter(t => t.tipo === 'gasto').forEach(t => cats[t.cat] = (cats[t.cat] || 0) + t.monto);
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, { type:'doughnut', data:{ labels:Object.keys(cats), datasets:[{data:Object.values(cats), backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'], borderWidth:0}] }, options:{ plugins:{legend:{position:'bottom', labels:{color:'#94a3b8'}}}}});
+        }
+
+        function cambiarTab(id, btn) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            btn.classList.add('active');
+        }
+    </script>
+</body>
+</html>
