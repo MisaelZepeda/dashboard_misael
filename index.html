@@ -19,10 +19,8 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
         body { background: var(--bg); color: var(--text); padding-bottom: 90px; }
         
-        /* Login Screen */
         #loginScreen { max-width: 400px; margin: 80px auto; padding: 30px; background: var(--surface); border-radius: 24px; border: 1px solid var(--line); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         
-        /* Dashboard Header */
         .main-header { padding: 30px 20px; background: linear-gradient(180deg, #1e40af, #0f172a); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: flex-start; }
         .balance-label { font-size: 12px; text-transform: uppercase; color: var(--muted); letter-spacing: 1px; }
         .balance-main { font-size: 36px; font-weight: 800; margin: 5px 0; }
@@ -31,23 +29,18 @@
         .container { padding: 15px; max-width: 700px; margin: 0 auto; }
         .card { background: var(--surface); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--line); }
         
-        /* Tabs e Inputs */
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.3s; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
         input, select { width: 100%; padding: 14px; border-radius: 12px; background: #0f172a; border: 1px solid var(--line); color: white; font-size: 16px; margin-bottom: 10px; }
         .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-danger { background: var(--danger); color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--line); color: var(--muted); }
 
-        /* Lista de Cuentas */
         .bank-item { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid var(--line); }
         .bank-info { display: flex; align-items: center; gap: 15px; }
         .bank-icon { width: 40px; height: 40px; border-radius: 10px; background: white; object-fit: contain; padding: 5px; }
         
-        /* Barra de Navegación */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 12px; border-top: 1px solid var(--line); z-index: 1000; }
         .nav-item { border: none; background: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; cursor: pointer; flex: 1; }
         .nav-item.active { color: var(--primary); }
@@ -62,8 +55,14 @@
         <h2 style="text-align: center; margin-bottom: 25px;">🔒 Acceso Seguro</h2>
         <input type="email" id="logEmail" placeholder="Correo electrónico">
         <input type="password" id="logPass" placeholder="Contraseña">
+        
         <button onclick="handleLogin()" class="btn btn-primary" style="margin-bottom: 10px;">Iniciar Sesión</button>
-        <button onclick="handleRegistro()" class="btn btn-outline">Crear Cuenta</button>
+        
+        <p style="text-align: center; margin-bottom: 15px;">
+            <a href="#" onclick="recuperarContrasena()" style="color: var(--muted); font-size: 13px; text-decoration: none;">¿Olvidaste tu contraseña?</a>
+        </p>
+        
+        <button onclick="handleRegistro()" class="btn btn-outline">Crear Cuenta Nueva</button>
     </div>
 
     <div id="appDashboard" style="display: none;">
@@ -76,13 +75,13 @@
                     <div><small style="color:var(--danger)">Debo:</small> <p id="valDebo">$0.00</p></div>
                 </div>
             </div>
-            <div id="syncBadge" class="sync-badge">Conectado</div>
+            <div id="syncBadge" class="sync-badge">Sincronizado</div>
         </header>
 
         <main class="container">
             <section id="tab-resumen" class="tab-content active">
                 <div class="card">
-                    <h3>Gastos del Mes</h3>
+                    <h3>Gastos por Categoría</h3>
                     <canvas id="chartGastos" style="max-height: 250px;"></canvas>
                 </div>
                 <div class="card" id="listaHomeCuentas"></div>
@@ -104,9 +103,7 @@
                 <div class="card">
                     <h3>Traspaso entre Cuentas</h3>
                     <form onsubmit="handleTraspaso(event)">
-                        <label>Origen (De dónde sale):</label>
                         <select id="trOrigen" class="sel-todas"></select>
-                        <label>Destino (A dónde va):</label>
                         <select id="trDestino" class="sel-todas"></select>
                         <input type="number" id="trMonto" placeholder="Monto" required step="0.01">
                         <button type="submit" class="btn btn-primary">Ejecutar Traspaso</button>
@@ -123,7 +120,6 @@
                             <option>Comida</option><option>Servicios</option><option>Ocio</option><option>Salud</option><option>Otros</option>
                         </select>
                         <input type="number" id="gaMonto" placeholder="Monto" required step="0.01">
-                        <label>Pagar con:</label>
                         <select id="gaFuente" class="sel-todas"></select>
                         <button type="submit" class="btn btn-primary">Registrar Gasto</button>
                     </form>
@@ -135,7 +131,7 @@
                     <h3>Nueva Cuenta o Tarjeta</h3>
                     <form onsubmit="handleNuevaCuenta(event)">
                         <input type="text" id="cuNombre" placeholder="Nombre (Ej. Santander)" required>
-                        <input type="text" id="cuWeb" placeholder="Web (ej: bbva.mx para el logo)">
+                        <input type="text" id="cuWeb" placeholder="Dominio (ej: bbva.mx)">
                         <select id="cuTipo">
                             <option value="debito">Débito / Efectivo</option>
                             <option value="credito">Tarjeta de Crédito</option>
@@ -161,7 +157,7 @@
     </div>
 
     <script>
-        // --- CONFIGURACIÓN FIREBASE ---
+        // --- PEGA TUS CREDENCIALES AQUÍ ---
         const firebaseConfig = {
     apiKey: "AIzaSyD86xvnjFFHkdMhvHPOkYUn8_PdHgNOEK0",
     authDomain: "misuperappfinanciera.firebaseapp.com",
@@ -178,12 +174,10 @@
         let state = { cuentas: [], transacciones: [] };
         let chartInstance = null;
 
-        // --- CONTROL DE ACCESO ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('appDashboard').style.display = 'block';
-                // Vincular datos al UID del usuario para privacidad
                 db.ref('Usuarios/' + user.uid).on('value', snap => {
                     const data = snap.val() || { cuentas: {}, transacciones: {} };
                     state.cuentas = data.cuentas ? Object.values(data.cuentas) : [];
@@ -203,13 +197,20 @@
 
         function handleRegistro() {
             auth.createUserWithEmailAndPassword(document.getElementById('logEmail').value, document.getElementById('logPass').value)
-                .then(() => alert("Cuenta creada."))
+                .then(() => alert("Cuenta creada exitosamente."))
+                .catch(err => alert(err.message));
+        }
+
+        function recuperarContrasena() {
+            const email = document.getElementById('logEmail').value;
+            if (!email) return alert("Ingresa tu correo primero.");
+            auth.sendPasswordResetEmail(email)
+                .then(() => alert("Correo de recuperación enviado."))
                 .catch(err => alert(err.message));
         }
 
         function handleLogout() { auth.signOut(); }
 
-        // --- ACCIONES FINANCIERAS ---
         function handleNuevaCuenta(e) {
             e.preventDefault();
             const id = Date.now();
@@ -226,22 +227,22 @@
 
         function handleIngreso(e) {
             e.preventDefault();
-            const monto = parseFloat(document.getElementById('inMonto').value);
+            const m = parseFloat(document.getElementById('inMonto').value);
             const idCta = document.getElementById('inCuenta').value;
             const cta = state.cuentas.find(c => c.id == idCta);
-            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${idCta}/saldo`).set(cta.saldo + monto);
-            db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push({ tipo: 'ingreso', monto, fecha: document.getElementById('inFecha').value });
+            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${idCta}/saldo`).set(cta.saldo + m);
+            db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push({ tipo: 'ingreso', monto: m, fecha: document.getElementById('inFecha').value });
             e.target.reset();
         }
 
         function handleGasto(e) {
             e.preventDefault();
-            const monto = parseFloat(document.getElementById('gaMonto').value);
+            const m = parseFloat(document.getElementById('gaMonto').value);
             const idCta = document.getElementById('gaFuente').value;
             const cta = state.cuentas.find(c => c.id == idCta);
-            const nSaldo = cta.tipo === 'debito' ? cta.saldo - monto : cta.saldo + monto;
+            const nSaldo = cta.tipo === 'debito' ? cta.saldo - m : cta.saldo + m;
             db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${idCta}/saldo`).set(nSaldo);
-            db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push({ tipo: 'gasto', monto, cat: document.getElementById('gaCat').value });
+            db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push({ tipo: 'gasto', monto: m, cat: document.getElementById('gaCat').value });
             e.target.reset();
         }
 
@@ -255,7 +256,6 @@
             e.target.reset();
         }
 
-        // --- RENDERIZADO ---
         function renderAll() {
             let tengo = 0, debo = 0;
             const options = state.cuentas.map(c => `<option value="${c.id}">${c.nombre} ($${c.saldo.toLocaleString()})</option>`).join('');
