@@ -184,11 +184,12 @@ function handleGuardarPerfil(e) { e.preventDefault(); db.ref(`Usuarios/${auth.cu
 function toggleTheme() { const t = document.body.getAttribute('data-theme')==='dark'?'light':'dark'; document.body.setAttribute('data-theme', t); }
 if(document.getElementById('perfFile')) document.getElementById('perfFile').addEventListener('change', function(e) { const r = new FileReader(); r.onload = function() { state.currentBase64 = r.result; document.getElementById('perfDisplayFoto').src = r.result; }; if(e.target.files[0]) r.readAsDataURL(e.target.files[0]); });
 function renderChart(total) { const ctx = document.getElementById('chartGastos').getContext('2d'); const cats = {}; state.transacciones.filter(t => t.tipo === 'gasto').forEach(t => cats[t.cat] = (cats[t.cat] || 0) + t.monto); if(chartInstance) chartInstance.destroy(); chartInstance = new Chart(ctx, { type:'doughnut', data:{ labels:Object.keys(cats), datasets:[{data:Object.values(cats), backgroundColor:['#3b82f6','#10b981','#ef4444','#8b5cf6'], borderWidth:0}] }, options:{ maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'75%' } }); }
-// 11. GENERADOR DE PDF MENSUAL ESTILIZADO PRO
+
+
+
+// 11. GENERADOR DE PDF MENSUAL ESTILIZADO PRO (V2 - CON BALANCE COMPLETO Y TABLAS SEPARADAS)
 async function generarPDFMes() {
     if (!window.jspdf) { alert("Cargando librerías..."); return; }
-    
-    // Mostrar loader interno para PDFs largos
     if(document.getElementById('loader')) document.getElementById('loader').style.display = 'flex';
 
     const { jsPDF } = window.jspdf;
@@ -200,15 +201,12 @@ async function generarPDFMes() {
     const nombreMes = hoy.toLocaleString('es-ES', { month: 'long' }).toUpperCase();
     const prefijoMes = `${year}-${(hoy.getMonth() + 1).toString().padStart(2, '0')}`;
     
-    // User data
     const userName = document.getElementById('perfDisplayNombre').innerText;
-    const userPhotoBase64 = document.getElementById('perfDisplayFoto').src; // DataURL base64
+    const userPhotoBase64 = document.getElementById('perfDisplayFoto').src; 
     
-    // Colores del Perfil (obtenidos de las variables CSS)
     const estiloBody = getComputedStyle(document.body);
     const colorPrimarioHex = estiloBody.getPropertyValue('--primary').trim();
     
-    // Convertidor HEX a RGB para jsPDF
     const hexToRgb = (hex) => {
         var c = hex.substring(1).split('');
         if(c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
@@ -222,173 +220,156 @@ async function generarPDFMes() {
     let ingMes = 0, gasMes = 0;
     txMes.forEach(t => { if (t.tipo === 'ingreso') ingMes += t.monto; else gasMes += t.monto; });
 
-    // --- HELPER: CARGAR IMÁGENES ASÍNCRONAS ---
-    const cargarImagen = (url) => {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = "Anonymous";
-            img.src = url;
-            img.onload = () => resolve(img);
-            img.onerror = () => resolve(null); // Manejo de error sutil
-        });
-    };
+    // Separar Cuentas y Calcular Activos/Deudas/Patrimonio
+    let activos = 0, deudas = 0;
+    const cuentasDebito = [];
+    const cuentasCredito = [];
+    
+    state.cuentas.forEach(c => {
+        if (c.tipo === 'debito') {
+            activos += c.saldo;
+            cuentasDebito.push(c);
+        } else {
+            deudas += c.saldo;
+            cuentasCredito.push(c);
+        }
+    });
+    const patrimonio = activos - deudas;
 
     // --- DISEÑO DE PÁGINA (HEADER Y FOOTER) ---
-    const totalPagesExp = "{total_pages_count}";
-    
     const agregarEstiloPagina = (doc, colorRGB, nombre, foto) => {
-        // BANNER ENCABEZADO FIJO
         doc.setFillColor(colorRGB[0], colorRGB[1], colorRGB[2]);
-        doc.rect(0, 0, 210, 40, 'F'); // Franja de 40mm alto
+        doc.rect(0, 0, 210, 40, 'F'); 
         
-        // Foto de perfil redonda (requiere truco de recorte o imagen pre-redondeada)
-        // jsPDF no recorta nativamente en círculo fácil, asumimos DataURL cuadrado/redondo.
         try {
             if(foto && foto.startsWith('data:image')) {
-                doc.addImage(foto, 'PNG', 15, 8, 24, 24); // x, y, w, h
+                doc.addImage(foto, 'PNG', 15, 8, 24, 24); 
             }
         } catch(e) { console.log("Error añadiendo foto:", e); }
 
-        // Texto Encabezado
-        doc.setTextColor(255, 255, 255); // Blanco
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
+        doc.setTextColor(255, 255, 255); 
+        doc.setFontSize(10); doc.setFont(undefined, 'normal');
         doc.text("ESTADO DE CUENTA MÓVIL", 45, 15);
-        
-        doc.setFontSize(20);
-        doc.setFont(undefined, 'bold');
+        doc.setFontSize(20); doc.setFont(undefined, 'bold');
         doc.text(nombre.toUpperCase(), 45, 23);
-        
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
+        doc.setFontSize(10); doc.setFont(undefined, 'normal');
         doc.text(`Período reportado: ${nombreMes} ${year}`, 45, 30);
 
-        // PIE DE PÁGINA FIJO
         const pageHeight = doc.internal.pageSize.height;
         doc.setFillColor(colorRGB[0], colorRGB[1], colorRGB[2]);
-        doc.rect(0, pageHeight - 15, 210, 15, 'F'); // Franja 15mm alto
+        doc.rect(0, pageHeight - 15, 210, 15, 'F'); 
         
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255); doc.setFontSize(8);
         doc.text(`Generado por Dashboard Pro el ${hoy.toLocaleDateString()} a las ${hoy.toLocaleTimeString()}`, 15, pageHeight - 6);
-        
-        // Numeración de página (se actualizará al final)
-        let pageStr = `Página ${doc.internal.getNumberOfPages()}`;
-        doc.text(pageStr, 195, pageHeight - 6, { align: 'right' });
+        doc.text(`Página ${doc.internal.getNumberOfPages()}`, 195, pageHeight - 6, { align: 'right' });
     };
 
-    // --- INICIAR DIBUJO ---
-    // Agregamos estilo a la primera página manualmente
     agregarEstiloPagina(doc, rgbPrimario, userName, userPhotoBase64);
 
-    // 1. Sección Resumen Financiero
-    let yPos = 55;
-    doc.setTextColor(0);
-    doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
-    doc.text("RESUMEN GENERAL DEL MES", 15, yPos);
-    
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'normal');
-    
-    // Caja de Ingresos
-    doc.setFillColor(240, 253, 244); // Fondo verde muy tenue
-    doc.roundedRect(15, yPos + 5, 85, 20, 3, 3, 'F');
-    doc.setTextColor(16, 185, 129); // Texto Verde
-    doc.setFont(undefined, 'bold');
-    doc.text("TOTAL INGRESOS", 20, yPos + 12);
-    doc.setFontSize(16);
-    doc.text(`$${ingMes.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 20, yPos + 20);
-
-    // Caja de Gastos
-    doc.setFillColor(254, 242, 242); // Fondo rojo muy tenue
-    doc.roundedRect(110, yPos + 5, 85, 20, 3, 3, 'F');
-    doc.setTextColor(239, 68, 68); // Texto Rojo
-    doc.setFontSize(11);
-    doc.text("TOTAL GASTOS Y MOVS", 115, yPos + 12);
-    doc.setFontSize(16);
-    doc.text(`$${gasMes.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 115, yPos + 20);
-
-    // 2. Tabla de Cuentas (CON LOGOS)
-    yPos = yPos + 40;
-    doc.setTextColor(0);
-    doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
-    doc.text("SALDOS ACTUALES POR INSTITUCIÓN", 15, yPos);
+    // --- 1. SECCIÓN: BALANCE Y RESUMEN ---
+    let yPos = 50;
+    doc.setTextColor(0); doc.setFontSize(14); doc.setFont(undefined, 'bold');
+    doc.text("BALANCE GENERAL", 15, yPos);
     yPos += 5;
 
-    // Preparar datos de cuentas cargando los logos
-    const bodyCuentas = [];
-    for (const c of state.cuentas) {
-        // Intentamos cargar el logo (asumimos que c.icon es una URL DataURL o externa accesible)
-        let imgData = null;
-        try {
-            if(c.icon && c.icon.startsWith('data:image')) {
-                imgData = c.icon; // Ya es base64
-            }
-        } catch(e){}
+    // Fila 1: Activos, Deudas, Patrimonio
+    doc.setFillColor(240, 253, 244); doc.roundedRect(15, yPos, 55, 18, 3, 3, 'F');
+    doc.setTextColor(16, 185, 129); doc.setFontSize(9); doc.text("ACTIVOS (TENGO)", 18, yPos + 6);
+    doc.setFontSize(12); doc.text(`$${activos.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 18, yPos + 14);
 
-        bodyCuentas.push([
-            { content: '', image: imgData }, // Celda vacía para la imagen (se dibuja en hook)
+    doc.setFillColor(254, 242, 242); doc.roundedRect(75, yPos, 55, 18, 3, 3, 'F');
+    doc.setTextColor(239, 68, 68); doc.setFontSize(9); doc.text("DEUDAS (DEBO)", 78, yPos + 6);
+    doc.setFontSize(12); doc.text(`$${deudas.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 78, yPos + 14);
+
+    doc.setDrawColor(rgbPrimario[0], rgbPrimario[1], rgbPrimario[2]);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(135, yPos, 60, 18, 3, 3, 'FD');
+    doc.setTextColor(rgbPrimario[0], rgbPrimario[1], rgbPrimario[2]);
+    doc.setFontSize(9); doc.text("PATRIMONIO TOTAL", 138, yPos + 6);
+    doc.setFontSize(12); doc.text(`$${patrimonio.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 138, yPos + 14);
+
+    yPos += 22;
+
+    // Fila 2: Ingresos y Gastos
+    doc.setFillColor(240, 253, 244); doc.roundedRect(15, yPos, 85, 18, 3, 3, 'F');
+    doc.setTextColor(16, 185, 129); doc.setFontSize(9); doc.text("INGRESOS DEL MES", 18, yPos + 6);
+    doc.setFontSize(14); doc.text(`+ $${ingMes.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 18, yPos + 14);
+
+    doc.setFillColor(254, 242, 242); doc.roundedRect(110, yPos, 85, 18, 3, 3, 'F');
+    doc.setTextColor(239, 68, 68); doc.setFontSize(9); doc.text("GASTOS Y MOVS DEL MES", 113, yPos + 6);
+    doc.setFontSize(14); doc.text(`- $${gasMes.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 113, yPos + 14);
+
+    yPos += 28;
+
+    // --- 2. FUNCIÓN PARA CREAR TABLAS DE CUENTAS ---
+    const crearTablaCuentas = (titulo, datos, totalSaldos, startY) => {
+        doc.setTextColor(0); doc.setFontSize(13); doc.setFont(undefined, 'bold');
+        doc.text(titulo, 15, startY);
+
+        const bodyCuentas = datos.map(c => [
+            { content: '', image: (c.icon && c.icon.startsWith('data:image')) ? c.icon : null },
             c.nombre,
             c.banco.toUpperCase(),
-            c.tipo.toUpperCase(),
             `$${c.saldo.toLocaleString('es-MX', {minimumFractionDigits: 2})}`
         ]);
-    }
 
-    doc.autoTable({
-        startY: yPos,
-        head: [[ {content: 'Logo', styles: {halign: 'center'}}, 'Cuenta', 'Banco', 'Tipo', 'Saldo']],
-        body: bodyCuentas,
-        theme: 'striped',
-        headStyles: { fillColor: rgbPrimario, textColor: [255, 255, 255], fontStyle: 'bold' },
-        styles: { valign: 'middle', fontSize: 9 },
-        columnStyles: { 
-            0: { cellWidth: 15, halign: 'center' }, // Columna logo
-            4: { halign: 'right', fontStyle: 'bold' } // Columna Saldo
-        },
-        // Hook para dibujar los logos de los bancos dentro de las celdas
-        didDrawCell: (data) => {
-            if (data.section === 'body' && data.column.index === 0 && data.cell.raw.image) {
-                try {
-                    doc.addImage(data.cell.raw.image, 'PNG', data.cell.x + 2.5, data.cell.y + 2.5, 10, 10);
-                } catch(e){}
-            }
-        },
-        margin: { top: 45, bottom: 20 } // Márgenes para respetar header/footer en saltos
-    });
+        // Fila de Total
+        bodyCuentas.push([
+            { content: 'TOTAL', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: [240, 240, 240], textColor: [0, 0, 0] } },
+            { content: `$${totalSaldos.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240], textColor: [0, 0, 0] } }
+        ]);
 
-    // 3. Tabla Detalle de Movimientos del Mes
-    yPos = doc.lastAutoTable.finalY + 15;
+        doc.autoTable({
+            startY: startY + 4,
+            head: [[ {content: 'Logo', styles: {halign: 'center'}}, 'Cuenta', 'Institución', 'Saldo']],
+            body: bodyCuentas,
+            theme: 'striped',
+            headStyles: { fillColor: rgbPrimario, textColor: [255, 255, 255], fontStyle: 'bold' },
+            styles: { valign: 'middle', fontSize: 9 },
+            columnStyles: { 0: { cellWidth: 15, halign: 'center' }, 3: { halign: 'right', fontStyle: 'bold' } },
+            didDrawCell: (data) => {
+                if (data.section === 'body' && data.column.index === 0 && data.cell.raw && data.cell.raw.image) {
+                    try { doc.addImage(data.cell.raw.image, 'PNG', data.cell.x + 2.5, data.cell.y + 2.5, 10, 10); } catch(e){}
+                }
+            },
+            margin: { top: 45, bottom: 20 },
+            addPageContent: () => agregarEstiloPagina(doc, rgbPrimario, userName, userPhotoBase64)
+        });
+        return doc.lastAutoTable.finalY + 12;
+    };
+
+    // Imprimir Tabla Débitos
+    yPos = crearTablaCuentas("CUENTAS DE DÉBITO (ACTIVOS)", cuentasDebito, activos, yPos);
     
-    // Verificar si cabe el título en la página actual
+    // Imprimir Tabla Créditos
+    yPos = crearTablaCuentas("CUENTAS DE CRÉDITO Y TDC (DEUDAS)", cuentasCredito, deudas, yPos);
+
+    // --- 3. TABLA DE MOVIMIENTOS DEL MES ---
     if(yPos > doc.internal.pageSize.height - 40) { doc.addPage(); yPos = 55; }
 
-    doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
+    doc.setTextColor(0); doc.setFontSize(13); doc.setFont(undefined, 'bold');
     doc.text(`DETALLE DE MOVIMIENTOS - ${nombreMes}`, 15, yPos);
-    yPos += 5;
-
+    
     const bodyMovs = txMes.map(t => {
         let catDisplay = t.cat || 'Ingreso';
         if(t.tipo === 'movimiento') catDisplay = t.subtipo === 'pago' ? 'PAGO TDC' : 'TRASPASO';
-        
         const esIngreso = t.tipo === 'ingreso';
-
         return [
             t.fecha,
             catDisplay.toUpperCase(),
             t.desc,
-            { 
-                content: `${esIngreso ? '+' : '-'} $${t.monto.toLocaleString('es-MX', {minimumFractionDigits: 2})}`,
-                styles: { textColor: esIngreso ? [16, 185, 129] : [239, 68, 68], fontStyle: 'bold' }
-            }
+            { content: `${esIngreso ? '+' : '-'} $${t.monto.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, styles: { textColor: esIngreso ? [16, 185, 129] : [239, 68, 68], fontStyle: 'bold' } }
         ];
     });
 
+    // Fila total movimientos
+    bodyMovs.push([
+        { content: 'BALANCE DEL MES (INGRESOS - GASTOS)', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: [240, 240, 240], textColor: [0, 0, 0] } },
+        { content: `$${(ingMes - gasMes).toLocaleString('es-MX', {minimumFractionDigits: 2})}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240], textColor: [0, 0, 0] } }
+    ]);
+
     doc.autoTable({
-        startY: yPos,
+        startY: yPos + 4,
         head: [['Fecha', 'Categoría', 'Concepto', 'Monto']],
         body: bodyMovs,
         theme: 'grid',
@@ -396,13 +377,10 @@ async function generarPDFMes() {
         styles: { valign: 'middle', fontSize: 8 },
         columnStyles: { 3: { halign: 'right' } },
         margin: { top: 45, bottom: 20 },
-        // Hook para agregar header/footer en páginas nuevas automáticamente
-        addPageContent: (data) => {
-             agregarEstiloPagina(doc, rgbPrimario, userName, userPhotoBase64);
-        }
+        addPageContent: () => agregarEstiloPagina(doc, rgbPrimario, userName, userPhotoBase64)
     });
 
-    // Re-aplicar estilos a TODAS las páginas (necesario por cómo funciona AutoTable)
+    // Re-aplicar estilos a TODAS las páginas 
     const pageCount = doc.internal.getNumberOfPages();
     for(let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -413,9 +391,10 @@ async function generarPDFMes() {
     const nombreArchivo = `EstadoCuenta_${userName.replace(/\s+/g, '_')}_${nombreMes}_${year}.pdf`;
     doc.save(nombreArchivo);
     
-    // Ocultar loader
     if(document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
 }
+
+
 
 
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
