@@ -15,33 +15,64 @@ const db = firebase.database();
 let state = { cuentas: [], transacciones: [], currentBase64: "", selectedColor: "#3b82f6" };
 let chartInstance = null;
 let currentEditId = null;
-let currentMovMode = 'pago'; // 'pago' o 'traspaso'
+let currentMovMode = 'pago'; 
 
-// 2. SEGURIDAD DE SESIÓN (Cierre al cerrar pestaña o inactividad)
+// 2. SEGURIDAD DE SESIÓN
 auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
-
 let inactivityTimer;
 function resetTimer() {
     clearTimeout(inactivityTimer);
     if(auth.currentUser) {
         inactivityTimer = setTimeout(() => {
-            auth.signOut();
-            alert("Sesión cerrada por seguridad (15 min de inactividad).");
+            auth.signOut().then(() => window.location.reload());
         }, 15 * 60 * 1000);
     }
 }
 window.onload = resetTimer; document.onmousemove = resetTimer; document.onkeypress = resetTimer; document.ontouchstart = resetTimer;
 
-// 3. AUTH LOGIC
+// 3. AUTH & REGISTRO LOGIC
+let regBase64 = "";
+if(document.getElementById('regFoto')) {
+    document.getElementById('regFoto').addEventListener('change', function(e) {
+        const reader = new FileReader();
+        reader.onload = function() { regBase64 = reader.result; };
+        if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]);
+    });
+}
+
 function toggleAuthForm(type) {
     document.getElementById('loginForm').style.display = type === 'login' ? 'block' : 'none';
     document.getElementById('registerForm').style.display = type === 'register' ? 'block' : 'none';
     document.getElementById('resetForm').style.display = type === 'reset' ? 'block' : 'none';
 }
-function handleLogin() { auth.signInWithEmailAndPassword(document.getElementById('logEmail').value, document.getElementById('logPass').value).catch(e => alert(e.message)); }
-function handleRegistro() { auth.createUserWithEmailAndPassword(document.getElementById('regEmail').value, document.getElementById('regPass').value).then(() => alert("Bienvenido")).catch(e => alert(e.message)); }
+
+function handleLogin() { 
+    auth.signInWithEmailAndPassword(document.getElementById('logEmail').value, document.getElementById('logPass').value).catch(e => alert(e.message)); 
+}
+
+function handleRegistro() { 
+    const email = document.getElementById('regEmail').value;
+    const pass = document.getElementById('regPass').value;
+    const nombre = document.getElementById('regNombre').value;
+    
+    if(!nombre) { alert("El nombre es obligatorio"); return; }
+    
+    auth.createUserWithEmailAndPassword(email, pass).then((cred) => {
+        // Ícono por defecto usando iniciales si no sube foto
+        const defaultPic = `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=3b82f6&color=fff&size=128`;
+        
+        db.ref(`Usuarios/${cred.user.uid}/perfil`).set({
+            nombre: nombre,
+            foto: regBase64 || defaultPic,
+            color: "#3b82f6"
+        }).then(() => {
+            alert("¡Bienvenido " + nombre + "!");
+        });
+    }).catch(e => alert(e.message)); 
+}
+
 function handleResetPassword() { auth.sendPasswordResetEmail(document.getElementById('resetEmail').value).then(() => { alert("Enviado"); toggleAuthForm('login'); }).catch(e => alert(e.message)); }
-function handleLogout() { auth.signOut(); }
+function handleLogout() { auth.signOut().then(() => window.location.reload()); }
 
 // 4. ESTADO EN TIEMPO REAL
 auth.onAuthStateChanged(user => {
@@ -56,12 +87,15 @@ auth.onAuthStateChanged(user => {
             state.transacciones = data.transacciones ? Object.entries(data.transacciones).map(([id, val]) => ({...val, firebaseId: id})) : [];
             const p = data.perfil || { nombre: "Usuario", foto: "https://via.placeholder.com/100", color: "#3b82f6" };
             
+            // CORRECCIÓN DEL COLOR
+            state.selectedColor = p.color; 
+            document.documentElement.style.setProperty('--primary', p.color);
+
             document.getElementById('headerGreeting').innerText = `Hola ${p.nombre} :)`;
             document.getElementById('headerFoto').src = p.foto;
             document.getElementById('perfDisplayNombre').innerText = p.nombre;
             document.getElementById('perfDisplayFoto').src = p.foto;
             if(document.getElementById('perfNombre')) document.getElementById('perfNombre').value = p.nombre;
-            document.documentElement.style.setProperty('--primary', p.color);
             renderAll();
         });
     } else {
@@ -81,7 +115,6 @@ function cambiarTab(id, btn) {
     if(btn) btn.classList.add('active');
     closeDropdowns(); window.scrollTo(0,0);
     
-    // Limpiar modo edición si cambia de pestaña
     currentEditId = null;
     document.querySelectorAll('form').forEach(f => f.reset());
     ['inCuenta', 'gaFuente', 'movOrigen', 'movDestino'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).disabled = false; });
@@ -90,12 +123,11 @@ function cambiarTab(id, btn) {
     document.getElementById('movTitle').innerText = "Nuevo Movimiento";
 }
 
-// 6. LOGICA TRANSACCIONAL ROBUSTA (Revertir y Aplicar)
+// 6. LOGICA TRANSACCIONAL ROBUSTA
 function revertirTransaccion(fid) {
     const t = state.transacciones.find(x => x.firebaseId === fid);
     if (!t) return {};
     let updates = {};
-    
     if (t.tipo === 'ingreso') {
         const c = state.cuentas.find(x => x.id == t.cuentaId);
         if(c) updates[`cuentas/${c.id}/saldo`] = c.saldo - t.monto;
@@ -103,7 +135,6 @@ function revertirTransaccion(fid) {
         const c = state.cuentas.find(x => x.id == t.cuentaId);
         if(c) updates[`cuentas/${c.id}/saldo`] = c.tipo === 'debito' ? c.saldo + t.monto : c.saldo - t.monto;
     } else if (t.tipo === 'movimiento') {
-        // Revierte traspaso o pago
         const or = state.cuentas.find(x => x.id == t.origenId);
         const des = state.cuentas.find(x => x.id == t.destinoId);
         if(or) updates[`cuentas/${or.id}/saldo`] = or.saldo + t.monto;
@@ -111,14 +142,12 @@ function revertirTransaccion(fid) {
     }
     return updates;
 }
-
 function eliminarTransaccion(fid) {
     if(!confirm("¿Borrar este registro y devolver los saldos a las cuentas vinculadas?")) return;
     let updates = revertirTransaccion(fid);
     updates[`transacciones/${fid}`] = null;
     db.ref(`Usuarios/${auth.currentUser.uid}`).update(updates);
 }
-
 // INGRESOS
 function editIngreso(fid) { 
     const t = state.transacciones.find(x => x.firebaseId === fid); 
@@ -135,8 +164,6 @@ function handleIngreso(e) {
     
     const cId = currentEditId ? state.transacciones.find(x => x.firebaseId === currentEditId).cuentaId : document.getElementById('inCuenta').value;
     const c = state.cuentas.find(x => x.id == cId);
-    
-    // Obtener el saldo calculado después de la posible reversión
     let currentSaldo = updates[`cuentas/${c.id}/saldo`] !== undefined ? updates[`cuentas/${c.id}/saldo`] : c.saldo;
     
     const id = currentEditId || db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push().key;
@@ -175,7 +202,7 @@ function handleGasto(e) {
     db.ref(`Usuarios/${auth.currentUser.uid}`).update(updates).then(() => { e.target.reset(); currentEditId = null; document.getElementById('gaFuente').disabled = false; document.getElementById('gastoFormTitle').innerText = "Nuevo Gasto"; });
 }
 
-// MOVIMIENTOS VINCULADOS (Traspasos y Pagos TDC)
+// MOVIMIENTOS VINCULADOS
 function setMovMode(mode) {
     currentMovMode = mode;
     document.getElementById('btnModoPago').style.background = mode === 'pago' ? 'var(--primary)' : 'var(--muted)';
@@ -188,14 +215,9 @@ function editMovimiento(fid) {
     const t = state.transacciones.find(x => x.firebaseId === fid);
     cambiarTab('traspasos');
     setMovMode(t.subtipo || 'traspaso');
-    document.getElementById('movOrigen').value = t.origenId;
-    document.getElementById('movDestino').value = t.destinoId;
-    document.getElementById('movMonto').value = t.monto;
-    
-    document.getElementById('movOrigen').disabled = true;
-    document.getElementById('movDestino').disabled = true;
-    currentEditId = fid;
-    document.getElementById('movTitle').innerText = "Editando Movimiento (Cuentas Fijas)";
+    document.getElementById('movOrigen').value = t.origenId; document.getElementById('movDestino').value = t.destinoId; document.getElementById('movMonto').value = t.monto;
+    document.getElementById('movOrigen').disabled = true; document.getElementById('movDestino').disabled = true;
+    currentEditId = fid; document.getElementById('movTitle').innerText = "Editando Movimiento (Cuentas Fijas)";
 }
 
 function handleMovimiento(e) {
@@ -205,9 +227,7 @@ function handleMovimiento(e) {
 
     const orId = currentEditId ? state.transacciones.find(x => x.firebaseId === currentEditId).origenId : document.getElementById('movOrigen').value;
     const desId = currentEditId ? state.transacciones.find(x => x.firebaseId === currentEditId).destinoId : document.getElementById('movDestino').value;
-    
-    const or = state.cuentas.find(x => x.id == orId);
-    const des = state.cuentas.find(x => x.id == desId);
+    const or = state.cuentas.find(x => x.id == orId); const des = state.cuentas.find(x => x.id == desId);
 
     let sOr = updates[`cuentas/${or.id}/saldo`] !== undefined ? updates[`cuentas/${or.id}/saldo`] : or.saldo;
     let sDes = updates[`cuentas/${des.id}/saldo`] !== undefined ? updates[`cuentas/${des.id}/saldo`] : des.saldo;
@@ -229,35 +249,27 @@ function handleMovimiento(e) {
     });
 }
 
-// 7. ZONA DE PELIGRO (Reset y Eliminar)
+// 7. ZONA DE PELIGRO
 function resetearCuenta() {
     if(!confirm("⚠️ ¿Estás seguro? Se borrarán todos tus ingresos, gastos y traspasos. Tus cuentas quedarán en $0.")) return;
-    
-    let updates = {};
-    updates['transacciones'] = null; // Borra historial completo
-    
-    state.cuentas.forEach(c => {
-        updates[`cuentas/${c.id}/saldo`] = 0;
-        updates[`cuentas/${c.id}/mesPagado`] = null; // Quita las palomitas
-    });
-
-    db.ref(`Usuarios/${auth.currentUser.uid}`).update(updates).then(() => {
-        alert("Cuenta restablecida a $0.");
-    });
+    let updates = {}; updates['transacciones'] = null; 
+    state.cuentas.forEach(c => { updates[`cuentas/${c.id}/saldo`] = 0; updates[`cuentas/${c.id}/mesPagado`] = null; });
+    db.ref(`Usuarios/${auth.currentUser.uid}`).update(updates).then(() => alert("Cuenta restablecida a $0."));
 }
 
 function eliminarUsuario() {
     if(!confirm("🚨 ¡PELIGRO! Esto borrará tu cuenta de Firebase permanentemente. No se puede recuperar. ¿Continuar?")) return;
-    
     const user = auth.currentUser;
-    // 1. Borrar datos de la base de datos
+    
+    // Eliminación real y total
     db.ref(`Usuarios/${user.uid}`).remove().then(() => {
-        // 2. Borrar autenticación
         user.delete().then(() => {
-            alert("Cuenta eliminada permanentemente. Hasta pronto.");
+            alert("Cuenta eliminada correctamente.");
+            window.location.reload(); // Recarga y limpia la sesión en pantalla
         }).catch(e => {
             if(e.code === 'auth/requires-recent-login') {
-                alert("Por seguridad, cierra sesión, vuelve a iniciar y repite este proceso para eliminar tu cuenta.");
+                alert("Por seguridad, debes volver a iniciar sesión para confirmar la eliminación.");
+                auth.signOut().then(() => window.location.reload());
             } else alert(e.message);
         });
     });
@@ -311,12 +323,13 @@ function actualizarSelects() {
     if(document.getElementById('movDestino')) document.getElementById('movDestino').innerHTML = currentMovMode === 'pago' ? optCre : optDeb;
 }
 
-// 9. CONFIGURACIÓN FINAL (Color, Tema, Cuentas)
+// 9. CONFIGURACIÓN FINAL Y PERFIL
+function getBankLogo(banco) { const map = { "bbva": "bbva.mx", "nu": "nu.com.mx", "santander": "santander.com.mx" }; const dom = map[banco.toLowerCase().trim()] || `${banco.toLowerCase().replace(/\s/g, '')}.com`; return `https://www.google.com/s2/favicons?domain=${dom}&sz=64`; }
+function selectColor(hex, el) { state.selectedColor = hex; document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active')); el.classList.add('active'); document.documentElement.style.setProperty('--primary', hex); }
 function handleNuevaCuenta(e) { e.preventDefault(); const id=Date.now(); const b=document.getElementById('cuBanco').value; db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${id}`).set({id, nombre:document.getElementById('cuNombre').value, banco:b, tipo:document.getElementById('cuTipo').value, saldo:parseFloat(document.getElementById('cuSaldo').value), icon:getBankLogo(b), diaPago:parseInt(document.getElementById('cuPago').value)||0}); e.target.reset(); }
 function handleGuardarPerfil(e) { e.preventDefault(); db.ref(`Usuarios/${auth.currentUser.uid}/perfil`).set({ nombre: document.getElementById('perfNombre').value, foto: state.currentBase64 || document.getElementById('perfDisplayFoto').src, color: state.selectedColor }).then(() => { alert("Perfil actualizado"); cambiarTab('resumen'); }); }
 function toggleTheme() { const t = document.body.getAttribute('data-theme')==='dark'?'light':'dark'; document.body.setAttribute('data-theme', t); }
+
 if(document.getElementById('perfFile')) { document.getElementById('perfFile').addEventListener('change', function(e) { const reader = new FileReader(); reader.onload = function() { state.currentBase64 = reader.result; document.getElementById('perfDisplayFoto').src = reader.result; }; if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]); }); }
-
 function renderChart(total) { const ctx = document.getElementById('chartGastos').getContext('2d'); const cats = {}; state.transacciones.filter(t => t.tipo === 'gasto').forEach(t => cats[t.cat] = (cats[t.cat] || 0) + t.monto); if(chartInstance) chartInstance.destroy(); chartInstance = new Chart(ctx, { type:'doughnut', data:{ labels:Object.keys(cats), datasets:[{data:Object.values(cats), backgroundColor:['#3b82f6','#10b981','#ef4444','#8b5cf6'], borderWidth:0}] }, options:{ maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'75%' } }); }
-
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
