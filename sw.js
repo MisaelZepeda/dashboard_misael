@@ -1,29 +1,18 @@
-const CACHE_NAME = 'dashboard-pro-v1';
-const urlsToCache = [
-  './index.html',
-  './styles.css',
-  './app.js',
-  './manifest.json',
-  './icon.png'
-];
+const CACHE_NAME = 'dashpro-v1';
 
-// Instalación del Service Worker
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache);
-      })
-  );
+// Instalación básica
+self.addEventListener('install', (e) => {
+  console.log('Service Worker instalado');
 });
 
-// Interceptar peticiones para que la app cargue rapidísimo
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Devuelve lo que hay en caché, o hace la petición a internet
-        return response || fetch(event.request);
-      })
+// Activación
+self.addEventListener('activate', (e) => {
+  console.log('Service Worker activo');
+});
+
+// Este evento es OBLIGATORIO para que sea PWA
+self.addEventListener('fetch', (e) => {
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
