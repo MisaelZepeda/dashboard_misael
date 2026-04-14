@@ -16,8 +16,12 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body onclick="closeDropdowns(event)">
+
     <div id="loader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
         <div style="width:50px; height:50px; border:5px solid var(--line); border-top-color:var(--primary); border-radius:50%; animation:spin 1s linear infinite;"></div>
         <p style="margin-top:15px; color:var(--muted); font-weight:bold; font-size:14px;">Cargando tu información...</p>
@@ -86,6 +90,12 @@
                 </div>
                 <div class="card"><h3>Distribución</h3><div style="height:180px;"><canvas id="chartGastos"></canvas></div></div>
                 <div class="widget-grid"><div class="widget"><h4>Débitos</h4><div id="widgetDebitos"></div></div><div class="widget"><h4>Créditos</h4><div id="widgetCreditos"></div></div></div>
+                
+                <div style="margin-top: 20px;">
+                    <button onclick="generarPDFMes()" class="btn-primary" style="background: #1e293b; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <span>📄</span> Generar Estado de Cuenta PDF
+                    </button>
+                </div>
             </section>
 
             <section id="tab-ingresos" class="tab-content">
