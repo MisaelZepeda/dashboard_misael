@@ -10,56 +10,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
+    <link rel="stylesheet" href="styles.css">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-    
-    <style>
-        :root { --bg: #f8fafc; --surface: #ffffff; --primary: #3b82f6; --success: #10b981; --danger: #ef4444; --text: #1e293b; --muted: #64748b; --line: #e2e8f0; --nav: #ffffff; }
-        [data-theme="dark"] { --bg: #0f172a; --surface: #1e293b; --text: #f8fafc; --muted: #94a3b8; --line: #334155; --nav: #1e293b; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; transition: background 0.3s, color 0.3s; }
-        body { background: var(--bg); color: var(--text); padding-bottom: calc(100px + env(safe-area-inset-bottom)); min-height: 100vh; overflow-x: hidden; }
-        .top-right-nav { position: fixed; top: env(safe-area-inset-top, 10px); right: 15px; z-index: 2000; }
-        .user-badge { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.95); padding: 6px 12px; border-radius: 25px; backdrop-filter: blur(10px); border: 1px solid var(--line); cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        [data-theme="dark"] .user-badge { background: rgba(30,41,59,0.95); }
-        .user-badge img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
-        .user-dropdown { display: none; position: absolute; top: 50px; right: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 15px; min-width: 180px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; z-index: 2001; }
-        .user-dropdown.show { display: block; animation: fadeIn 0.2s; }
-        .user-dropdown button { width: 100%; padding: 14px; border: none; background: none; color: var(--text); text-align: left; font-size: 14px; cursor: pointer; border-bottom: 1px solid var(--line); }
-        .main-header { padding: calc(100px + env(safe-area-inset-top)) 20px 30px; background: linear-gradient(135deg, var(--primary), #1e40af); color: white; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; text-align: center; }
-        .header-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; max-width: 600px; margin: 0 auto; }
-        .header-item b { font-size: 15px; display: block; margin-top: 5px; white-space: nowrap; }
-        .container { padding: 15px; max-width: 600px; margin: 0 auto; }
-        .card { background: var(--surface); border-radius: 24px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--line); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s; }
-        .bank-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); gap: 10px; }
-        .bank-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-        .bank-icon { width: 32px; height: 32px; border-radius: 8px; background: white; padding: 4px; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .bank-details { overflow: hidden; line-height: 1.2; flex: 1; }
-        .bank-details b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
-        .widget-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
-        .widget { background: var(--surface); padding: 12px; border-radius: 18px; border: 1px solid var(--line); overflow: hidden; }
-        .widget h4 { font-size: 9px; color: var(--muted); text-transform: uppercase; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 8px; }
-        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--nav); display: flex; justify-content: space-around; padding: 10px 5px calc(15px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); z-index: 1000; }
-        .nav-item { border: none; background: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 9px; flex: 1; cursor: pointer; }
-        .nav-item.active { color: var(--primary); font-weight: 800; }
-        .nav-item span { font-size: 20px; }
-        input, select { width: 100%; padding: 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); color: var(--text); font-size: 16px; margin-bottom: 12px; -webkit-appearance: none; }
-        .btn-primary { width: 100%; padding: 16px; border-radius: 15px; border: none; background: var(--primary); color: white; font-weight: 800; font-size: 16px; }
-        .btn-ghost { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; margin-top: 10px; }
-        .edit-btn { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 18px; margin-right: 10px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .color-palette { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; justify-content: center; }
-        .color-swatch { width: 45px; height: 45px; border-radius: 8px; cursor: pointer; border: 4px solid transparent; }
-        .color-swatch.active { border-color: var(--text); transform: scale(1.1); }
-        .btn-check-pago { background: var(--success); color: white; border: none; padding: 10px; border-radius: 10px; font-size: 12px; margin-top: 8px; cursor: pointer; font-weight: 700; width: 100%; }
-        .action-link { font-size: 11px; color: var(--primary); cursor: pointer; margin-right: 12px; font-weight: 600; }
-        .action-link.danger { color: var(--danger); }
-    </style>
 </head>
 <body onclick="closeDropdowns(event)">
+
     <div id="loginScreen" style="padding: 60px 20px;">
         <h1 style="text-align:center; margin-bottom:30px; font-weight:900;">DASHBOARD PRO</h1>
         <div id="authForms">
@@ -112,41 +71,97 @@
         <main class="container">
             <section id="tab-resumen" class="tab-content active">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-                    <div class="card" style="margin-bottom:0; padding:15px; text-align:center;"><small style="font-size:9px; font-weight:900;">INGRESOS MES</small><p id="homeIngresos" style="color:var(--success); font-weight:900; font-size:18px;">$0</p></div>
-                    <div class="card" style="margin-bottom:0; padding:15px; text-align:center;"><small style="font-size:9px; font-weight:900;">GASTOS MES</small><p id="homeGastos" style="color:var(--danger); font-weight:900; font-size:18px;">$0</p></div>
+                    <div class="card" style="margin-bottom:0; padding:15px; text-align:center;"><small class="mini-title">INGRESOS MES</small><p id="homeIngresos" class="val-success">$0</p></div>
+                    <div class="card" style="margin-bottom:0; padding:15px; text-align:center;"><small class="mini-title">GASTOS MES</small><p id="homeGastos" class="val-danger">$0</p></div>
                 </div>
                 <div class="card"><h3>Distribución</h3><div style="height:180px;"><canvas id="chartGastos"></canvas></div></div>
                 <div class="widget-grid"><div class="widget"><h4>Débitos</h4><div id="widgetDebitos"></div></div><div class="widget"><h4>Créditos</h4><div id="widgetCreditos"></div></div></div>
             </section>
 
             <section id="tab-ingresos" class="tab-content">
-                <div class="card"><h3 id="ingresoFormTitle">Nuevo Ingreso</h3><br><form onsubmit="handleIngreso(event)"><input type="hidden" id="editIngresoId"><input type="text" id="inDesc" placeholder="Concepto (ej: Sueldo)" required><input type="number" id="inMonto" placeholder="Monto $" required step="0.01"><select id="inCuenta" class="sel-debito"></select><button type="submit" class="btn-primary">Guardar</button></form></div>
+                <div class="card">
+                    <h3 id="ingresoFormTitle">Nuevo Ingreso</h3><br>
+                    <form onsubmit="handleIngreso(event)">
+                        <input type="text" id="inDesc" placeholder="Concepto (ej: Sueldo)" required>
+                        <input type="number" id="inMonto" placeholder="Monto $" required step="0.01">
+                        <select id="inCuenta" class="sel-debito"></select>
+                        <button type="submit" class="btn-primary">Guardar</button>
+                    </form>
+                </div>
                 <div class="card"><h4>Historial</h4><div id="listaIngresos"></div></div>
             </section>
 
             <section id="tab-gastos" class="tab-content">
-                <div class="card"><h3 id="gastoFormTitle">Nuevo Gasto</h3><br><form onsubmit="handleGasto(event)"><input type="hidden" id="editGastoId"><input type="text" id="gaDesc" placeholder="Concepto" required><select id="gaCat"><option>Comida</option><option>Servicios</option><option>Ocio</option><option>Salud</option><option>Otros</option></select><input type="number" id="gaMonto" placeholder="Monto $" required step="0.01"><select id="gaFuente" class="sel-todas"></select><button type="submit" class="btn-primary">Guardar</button></form></div>
+                <div class="card">
+                    <h3 id="gastoFormTitle">Nuevo Gasto</h3><br>
+                    <form onsubmit="handleGasto(event)">
+                        <input type="text" id="gaDesc" placeholder="Concepto" required>
+                        <select id="gaCat"><option>Comida</option><option>Servicios</option><option>Ocio</option><option>Salud</option><option>Otros</option></select>
+                        <input type="number" id="gaMonto" placeholder="Monto $" required step="0.01">
+                        <select id="gaFuente" class="sel-todas"></select>
+                        <button type="submit" class="btn-primary">Guardar</button>
+                    </form>
+                </div>
                 <div class="card"><h4>Historial</h4><div id="listaGastos"></div></div>
             </section>
 
             <section id="tab-traspasos" class="tab-content">
                 <div class="card" style="text-align: center;">
-                    <h3>Movimientos</h3><br>
-                    <div style="display: flex; gap: 10px; margin-bottom: 20px;"><button onclick="toggleMovimiento('pago')" class="btn-primary" style="font-size: 12px; padding: 10px;">Pago a TDC</button><button onclick="toggleMovimiento('traspaso')" class="btn-primary" style="font-size: 12px; padding: 10px; background: var(--muted);">Traspaso</button></div>
-                    <div id="formPagoTDC"><form onsubmit="handlePagoTDC(event)"><label>Desde (Débito):</label><select id="pagoOrigen" class="sel-debito"></select><label>Hacia (Crédito):</label><select id="pagoDestino" class="sel-credito"></select><input type="number" id="pagoMonto" placeholder="Monto $" required step="0.01"><button type="submit" class="btn-primary">Ejecutar Pago</button></form></div>
-                    <div id="formTraspaso" style="display:none;"><form onsubmit="handleTraspaso(event)"><label>Origen (Débito):</label><select id="trOrigen" class="sel-debito"></select><label>Destino (Débito):</label><select id="trDestino" class="sel-debito"></select><input type="number" id="trMonto" placeholder="Monto $" required step="0.01"><button type="submit" class="btn-primary">Ejecutar Traspaso</button></form></div>
+                    <h3 id="movTitle">Nuevo Movimiento</h3><br>
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <button type="button" onclick="setMovMode('pago')" id="btnModoPago" class="btn-primary" style="font-size: 12px; padding: 10px;">Pago a TDC</button>
+                        <button type="button" onclick="setMovMode('traspaso')" id="btnModoTras" class="btn-primary" style="font-size: 12px; padding: 10px; background: var(--muted);">Traspaso</button>
+                    </div>
+                    <form onsubmit="handleMovimiento(event)">
+                        <label style="font-size: 12px; text-align:left; display:block;">Origen (Débito):</label>
+                        <select id="movOrigen" class="sel-debito"></select>
+                        <label style="font-size: 12px; text-align:left; display:block;" id="lblDestino">Destino (Crédito):</label>
+                        <select id="movDestino" class="sel-credito"></select>
+                        <input type="number" id="movMonto" placeholder="Monto $" required step="0.01">
+                        <button type="submit" class="btn-primary" id="btnSubmitMov">Ejecutar</button>
+                    </form>
                 </div>
+                <div class="card"><h4>Historial de Movimientos</h4><div id="listaMovimientos"></div></div>
             </section>
 
             <section id="tab-cuentas" class="tab-content">
-                <div class="card"><h3>Nueva Cuenta</h3><br><form onsubmit="handleNuevaCuenta(event)"><input type="text" id="cuNombre" placeholder="Nombre" required><input type="text" id="cuBanco" placeholder="Banco" required><select id="cuTipo" onchange="toggleCamposTDC(this.value)"><option value="debito">Débito</option><option value="credito">Crédito</option></select><div id="camposTDC" style="display:none;"><input type="number" id="cuPago" placeholder="Día de pago (1-31)"></div><input type="number" id="cuSaldo" placeholder="Saldo/Deuda" required step="0.01"><button type="submit" class="btn-primary">Guardar</button></form></div>
+                <div class="card">
+                    <h3>Nueva Cuenta</h3><br>
+                    <form onsubmit="handleNuevaCuenta(event)">
+                        <input type="text" id="cuNombre" placeholder="Nombre (Ej: Nómina)" required>
+                        <input type="text" id="cuBanco" placeholder="Banco (Ej: Nu, BBVA)" required>
+                        <select id="cuTipo" onchange="document.getElementById('camposTDC').style.display = this.value==='credito'?'block':'none'"><option value="debito">Débito</option><option value="credito">Crédito</option></select>
+                        <div id="camposTDC" style="display:none;"><input type="number" id="cuPago" placeholder="Día de pago (1-31)"></div>
+                        <input type="number" id="cuSaldo" placeholder="Saldo/Deuda" required step="0.01">
+                        <button type="submit" class="btn-primary">Guardar</button>
+                    </form>
+                </div>
                 <div class="card"><h4>Administrar</h4><div id="listaMaestraCuentas"></div></div>
             </section>
 
             <section id="tab-perfil" class="tab-content">
                 <div class="card" style="text-align:center;">
-                    <img id="perfDisplayFoto" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:4px solid var(--primary);" src="https://via.placeholder.com/100"><h2 id="perfDisplayNombre">Usuario</h2><br>
-                    <form onsubmit="handleGuardarPerfil(event)"><input type="text" id="perfNombre" required><div class="color-palette" id="palette"><div class="color-swatch" style="background:#3b82f6" onclick="selectColor('#3b82f6', this)"></div><div class="color-swatch" style="background:#10b981" onclick="selectColor('#10b981', this)"></div><div class="color-swatch" style="background:#ef4444" onclick="selectColor('#ef4444', this)"></div><div class="color-swatch" style="background:#8b5cf6" onclick="selectColor('#8b5cf6', this)"></div><div class="color-swatch" style="background:#1e293b" onclick="selectColor('#1e293b', this)"></div></div><input type="file" id="perfFile" accept="image/*"><button type="submit" class="btn-primary" style="margin-top:15px;">Guardar Cambios</button></form>
+                    <img id="perfDisplayFoto" style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:4px solid var(--primary);" src="https://via.placeholder.com/100">
+                    <h2 id="perfDisplayNombre">Usuario</h2><br>
+                    <form onsubmit="handleGuardarPerfil(event)">
+                        <input type="text" id="perfNombre" required>
+                        <div class="color-palette" id="palette">
+                            <div class="color-swatch" style="background:#3b82f6" onclick="selectColor('#3b82f6', this)"></div>
+                            <div class="color-swatch" style="background:#10b981" onclick="selectColor('#10b981', this)"></div>
+                            <div class="color-swatch" style="background:#ef4444" onclick="selectColor('#ef4444', this)"></div>
+                            <div class="color-swatch" style="background:#8b5cf6" onclick="selectColor('#8b5cf6', this)"></div>
+                            <div class="color-swatch" style="background:#1e293b" onclick="selectColor('#1e293b', this)"></div>
+                        </div>
+                        <input type="file" id="perfFile" accept="image/*">
+                        <button type="submit" class="btn-primary" style="margin-top:15px;">Guardar Cambios</button>
+                    </form>
+                </div>
+
+                <div class="card danger-zone">
+                    <h3 style="color:var(--danger)">Zona de Peligro</h3>
+                    <p style="font-size:12px; color:var(--muted); margin: 10px 0;">Estas acciones son irreversibles.</p>
+                    <button onclick="resetearCuenta()" class="btn-outline-danger">Reiniciar Saldos (Dejar en $0)</button>
+                    <button onclick="eliminarUsuario()" class="btn-outline-danger" style="margin-top:10px;">Eliminar Cuenta Completa</button>
                 </div>
             </section>
         </main>
@@ -159,340 +174,7 @@
             <button class="nav-item" onclick="cambiarTab('cuentas', this)"><span>🏦</span>Cuentas</button>
         </nav>
     </div>
-       <script>
-        // CONFIGURACIÓN FIREBASE
-        const firebaseConfig = {
-            apiKey: "AIzaSyD86xvnjFFHkdMhvHPOkYUn8_PdHgNOEK0",
-            authDomain: "misuperappfinanciera.firebaseapp.com",
-            databaseURL: "https://misuperappfinanciera-default-rtdb.firebaseio.com",
-            projectId: "misuperappfinanciera",
-            storageBucket: "misuperappfinanciera.firebasestorage.app",
-            messagingSenderId: "320368053330",
-            appId: "1:320368053330:web:c85ec9a1108be81617a38b"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.database();
-        
-        let state = { cuentas: [], transacciones: [], currentBase64: "", selectedColor: "#3b82f6" };
-        let chartInstance = null;
-        
-        // Variables para evitar duplicados al editar
-        let currentEditIngresoId = null;
-        let currentEditGastoId = null;
 
-        // AUTH LOGIC
-        function toggleAuthForm(type) {
-            document.getElementById('loginForm').style.display = type === 'login' ? 'block' : 'none';
-            document.getElementById('registerForm').style.display = type === 'register' ? 'block' : 'none';
-            document.getElementById('resetForm').style.display = type === 'reset' ? 'block' : 'none';
-        }
-        function handleLogin() { auth.signInWithEmailAndPassword(document.getElementById('logEmail').value, document.getElementById('logPass').value).catch(e => alert(e.message)); }
-        function handleRegistro() { auth.createUserWithEmailAndPassword(document.getElementById('regEmail').value, document.getElementById('regPass').value).then(() => alert("Bienvenido")).catch(e => alert(e.message)); }
-        function handleResetPassword() { auth.sendPasswordResetEmail(document.getElementById('resetEmail').value).then(() => { alert("Correo enviado"); toggleAuthForm('login'); }).catch(e => alert(e.message)); }
-        function handleLogout() { auth.signOut(); }
-
-        // NAVIGATION & UI
-        function toggleUserMenu(e) { e.stopPropagation(); document.getElementById('userMenu').classList.toggle('show'); }
-        function closeDropdowns() { document.getElementById('userMenu').classList.remove('show'); }
-        
-        function cambiarTab(id, btn) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-            document.getElementById('tab-' + id).classList.add('active');
-            if(btn) btn.classList.add('active');
-            closeDropdowns(); window.scrollTo(0,0);
-            
-            // Limpiar ediciones y desbloquear campos si se cambia de pestaña a la mitad de una edición
-            currentEditIngresoId = null;
-            currentEditGastoId = null;
-            document.querySelectorAll('form').forEach(f => f.reset());
-            if(document.getElementById('inCuenta')) document.getElementById('inCuenta').disabled = false;
-            if(document.getElementById('gaFuente')) document.getElementById('gaFuente').disabled = false;
-            if(document.getElementById('ingresoFormTitle')) document.getElementById('ingresoFormTitle').innerText = "Nuevo Ingreso";
-            if(document.getElementById('gastoFormTitle')) document.getElementById('gastoFormTitle').innerText = "Nuevo Gasto";
-        }
-
-        function getBankLogo(banco) {
-            const map = { "bbva": "bbva.mx", "nu": "nu.com.mx", "santander": "santander.com.mx" };
-            const dom = map[banco.toLowerCase().trim()] || `${banco.toLowerCase().replace(/\s/g, '')}.com`;
-            return `https://www.google.com/s2/favicons?domain=${dom}&sz=64`;
-        }
-        
-        function selectColor(hex, el) { 
-            state.selectedColor = hex; 
-            document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active')); 
-            el.classList.add('active'); 
-            document.documentElement.style.setProperty('--primary', hex); 
-        }
-
-        // CARGA DE DATOS EN TIEMPO REAL
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('appDashboard').style.display = 'block';
-                db.ref('Usuarios/' + user.uid).on('value', snap => {
-                    const data = snap.val() || {};
-                    state.cuentas = data.cuentas ? Object.values(data.cuentas) : [];
-                    state.transacciones = data.transacciones ? Object.entries(data.transacciones).map(([id, val]) => ({...val, firebaseId: id})) : [];
-                    const p = data.perfil || { nombre: "Usuario", foto: "https://via.placeholder.com/100", color: "#3b82f6" };
-                    document.getElementById('headerGreeting').innerText = `Hola ${p.nombre} :)`;
-                    document.getElementById('headerFoto').src = p.foto;
-                    document.getElementById('perfDisplayNombre').innerText = p.nombre;
-                    document.getElementById('perfDisplayFoto').src = p.foto;
-                    if(document.getElementById('perfNombre')) document.getElementById('perfNombre').value = p.nombre;
-                    document.documentElement.style.setProperty('--primary', p.color);
-                    renderAll();
-                });
-            } else {
-                document.getElementById('loginScreen').style.display = 'block';
-                document.getElementById('appDashboard').style.display = 'none';
-            }
-        });
-
-        // ELIMINAR TRANSACCIÓN Y DEVOLVER DINERO
-        function eliminarTransaccion(fid, tipo) {
-            if(!confirm("¿Borrar este registro permanentemente y regresar el saldo a la cuenta?")) return;
-            const t = state.transacciones.find(x => x.firebaseId === fid);
-            const c = state.cuentas.find(x => x.id == t.cuentaId);
-            
-            let updates = {};
-            updates[`transacciones/${fid}`] = null; // Borra el registro
-            
-            if (c) {
-                if (tipo === 'ingreso') {
-                    updates[`cuentas/${c.id}/saldo`] = c.saldo - t.monto;
-                } else if (tipo === 'gasto') {
-                    updates[`cuentas/${c.id}/saldo`] = c.tipo === 'debito' ? c.saldo + t.monto : c.saldo - t.monto;
-                }
-            }
-            db.ref(`Usuarios/${auth.currentUser.uid}`).update(updates);
-        }
-
-        // LÓGICA DE INGRESOS (Crear y Editar)
-        function editIngreso(fid) { 
-            const t = state.transacciones.find(x => x.firebaseId === fid); 
-            cambiarTab('ingresos'); 
-            document.getElementById('inDesc').value = t.desc; 
-            document.getElementById('inMonto').value = t.monto; 
-            document.getElementById('inCuenta').value = t.cuentaId; 
-            document.getElementById('inCuenta').disabled = true; // Bloquea la cuenta para evitar descuadres
-            currentEditIngresoId = fid; 
-            document.getElementById('ingresoFormTitle').innerText = "Editando (Cuenta Bloqueada)"; 
-        }
-
-        function handleIngreso(e) {
-            e.preventDefault(); 
-            const m = parseFloat(document.getElementById('inMonto').value); 
-            let updates = {};
-
-            if (currentEditIngresoId) {
-                const oldT = state.transacciones.find(x => x.firebaseId === currentEditIngresoId);
-                const c = state.cuentas.find(x => x.id == oldT.cuentaId); // Forza la cuenta original
-                const transData = { desc: document.getElementById('inDesc').value, monto: m, tipo: 'ingreso', cuentaId: c.id, fecha: oldT.fecha };
-                
-                updates[`cuentas/${c.id}/saldo`] = c.saldo - oldT.monto + m;
-                updates[`transacciones/${currentEditIngresoId}`] = transData;
-            } else {
-                const newCtaId = document.getElementById('inCuenta').value;
-                const c = state.cuentas.find(x => x.id == newCtaId);
-                const transData = { desc: document.getElementById('inDesc').value, monto: m, tipo: 'ingreso', cuentaId: c.id, fecha: new Date().toISOString().split('T')[0] };
-                const newRef = db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push();
-                
-                updates[`transacciones/${newRef.key}`] = transData;
-                updates[`cuentas/${c.id}/saldo`] = c.saldo + m;
-            }
-
-            db.ref(`Usuarios/${auth.currentUser.uid}`).update(updates).then(() => {
-                e.target.reset(); currentEditIngresoId = null; 
-                document.getElementById('inCuenta').disabled = false; // Desbloquea
-                document.getElementById('ingresoFormTitle').innerText = "Nuevo Ingreso";
-            });
-        }
-
-        // LÓGICA DE GASTOS (Crear y Editar)
-        function editGasto(fid) { 
-            const t = state.transacciones.find(x => x.firebaseId === fid); 
-            cambiarTab('gastos'); 
-            document.getElementById('gaDesc').value = t.desc; 
-            document.getElementById('gaMonto').value = t.monto; 
-            document.getElementById('gaCat').value = t.cat || "Otros"; 
-            document.getElementById('gaFuente').value = t.cuentaId; 
-            document.getElementById('gaFuente').disabled = true; // Bloquea la cuenta para evitar descuadres
-            currentEditGastoId = fid; 
-            document.getElementById('gastoFormTitle').innerText = "Editando (Cuenta Bloqueada)"; 
-        }
-
-        function handleGasto(e) {
-            e.preventDefault();
-            const m = parseFloat(document.getElementById('gaMonto').value);
-            let updates = {};
-
-            if (currentEditGastoId) {
-                const oldT = state.transacciones.find(x => x.firebaseId === currentEditGastoId);
-                const c = state.cuentas.find(x => x.id == oldT.cuentaId); // Forza la cuenta original
-                const transData = { desc: document.getElementById('gaDesc').value, cat: document.getElementById('gaCat').value, monto: m, tipo: 'gasto', cuentaId: c.id, fecha: oldT.fecha };
-                
-                const diff = c.tipo === 'debito' ? (oldT.monto - m) : (-oldT.monto + m);
-                updates[`cuentas/${c.id}/saldo`] = c.saldo + diff;
-                updates[`transacciones/${currentEditGastoId}`] = transData;
-            } else {
-                const newCtaId = document.getElementById('gaFuente').value;
-                const c = state.cuentas.find(x => x.id == newCtaId);
-                const transData = { desc: document.getElementById('gaDesc').value, cat: document.getElementById('gaCat').value, monto: m, tipo: 'gasto', cuentaId: c.id, fecha: new Date().toISOString().split('T')[0] };
-                const newRef = db.ref(`Usuarios/${auth.currentUser.uid}/transacciones`).push();
-                
-                updates[`transacciones/${newRef.key}`] = transData;
-                updates[`cuentas/${c.id}/saldo`] = c.tipo === 'debito' ? c.saldo - m : c.saldo + m;
-            }
-
-            db.ref(`Usuarios/${auth.currentUser.uid}`).update(updates).then(() => {
-                e.target.reset(); currentEditGastoId = null; 
-                document.getElementById('gaFuente').disabled = false; // Desbloquea
-                document.getElementById('gastoFormTitle').innerText = "Nuevo Gasto";
-            });
-        }
-
-        // PAGOS Y TRASPASOS
-        function toggleMovimiento(type) { 
-            document.getElementById('formPagoTDC').style.display = type === 'pago' ? 'block' : 'none'; 
-            document.getElementById('formTraspaso').style.display = type === 'traspaso' ? 'block' : 'none'; 
-        }
-
-        function handlePagoTDC(e) { 
-            e.preventDefault(); 
-            const m = parseFloat(document.getElementById('pagoMonto').value); 
-            const or = state.cuentas.find(x => x.id == document.getElementById('pagoOrigen').value); 
-            const des = state.cuentas.find(x => x.id == document.getElementById('pagoDestino').value); 
-            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${or.id}/saldo`).set(or.saldo - m); 
-            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${des.id}/saldo`).set(des.saldo - m); 
-            db.ref(`Usuarios/${auth.currentUser.uid}/transacciones/${Date.now()}`).set({ tipo:'gasto', monto:m, cat:'Pago', desc:`Pago ${des.nombre}`, fecha:new Date().toISOString().split('T')[0], cuentaId:or.id }); 
-            e.target.reset(); alert("Pago Realizado"); 
-        }
-
-        function handleTraspaso(e) { 
-            e.preventDefault(); 
-            const m = parseFloat(document.getElementById('trMonto').value); 
-            const or = state.cuentas.find(x => x.id == document.getElementById('trOrigen').value); 
-            const des = state.cuentas.find(x => x.id == document.getElementById('trDestino').value); 
-            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${or.id}/saldo`).set(or.saldo - m); 
-            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${des.id}/saldo`).set(des.saldo + m); 
-            e.target.reset(); alert("Traspaso Realizado"); 
-        }
-
-        // RENDERIZADO PRINCIPAL
-        function renderAll() {
-            let tengo = 0, debo = 0, gT = 0, iT = 0; 
-            const hoy = new Date(); const diaHoy = hoy.getDate(); const mesAct = hoy.getMonth(); 
-            let hDeb = "", hCre = "", hMae = "";
-
-            state.cuentas.forEach(c => {
-                let aviso = "";
-                if(c.diaPago) {
-                    const ya = c.mesPagado === mesAct; const vence = c.diaPago - diaHoy;
-                    if(ya && vence >= -5) { 
-                        aviso = `<br><small style="color:var(--success)">✓ Pagado</small> <span onclick="db.ref('Usuarios/${auth.currentUser.uid}/cuentas/${c.id}/mesPagado').remove()" style="font-size:8px; cursor:pointer;">(Quitar)</span>`; 
-                    } else { 
-                        const col = vence < 0 || vence <= 3 ? 'var(--danger)' : 'var(--muted)'; 
-                        aviso = `<br><small style="color:${col}">${vence < 0 ? 'Atrasado' : 'Faltan: '+vence+'d'}</small><br><button class="btn-check-pago" onclick="db.ref('Usuarios/${auth.currentUser.uid}/cuentas/${c.id}/mesPagado').set(${mesAct})">Pagar</button>`; 
-                    }
-                }
-                const item = `<div class="bank-item"><div class="bank-info"><img src="${c.icon}" class="bank-icon"><div class="bank-details"><b>${c.nombre}</b>${aviso}</div></div><b>$${c.saldo.toLocaleString()}</b></div>`;
-                if(c.tipo==='debito'){ tengo+=c.saldo; hDeb+=item; } else { debo+=c.saldo; hCre+=item; }
-                
-                hMae += `<div class="bank-item"><div class="bank-info"><img src="${c.icon}" class="bank-icon"><b>${c.nombre}</b></div><div style="text-align:right"><b>$${c.saldo.toLocaleString()}</b><br><span class="action-link" onclick="const d=prompt('Dominio:'); if(d) db.ref('Usuarios/${auth.currentUser.uid}/cuentas/${c.id}/icon').set('https://www.google.com/s2/favicons?domain='+d+'&sz=64')">Logo</span><span class="action-link danger" onclick="if(confirm('¿Eliminar cuenta?')) db.ref('Usuarios/${auth.currentUser.uid}/cuentas/${c.id}').remove()">Borrar</span></div></div>`;
-            });
-
-            document.getElementById('widgetDebitos').innerHTML = hDeb || "<small>Vacío</small>"; 
-            document.getElementById('widgetCreditos').innerHTML = hCre || "<small>Vacío</small>"; 
-            document.getElementById('listaMaestraCuentas').innerHTML = hMae;
-            
-            document.getElementById('valTengo').innerText = `$${tengo.toLocaleString()}`; 
-            document.getElementById('valDebo').innerText = `$${debo.toLocaleString()}`; 
-            document.getElementById('valPatrimonio').innerText = `$${(tengo - debo).toLocaleString()}`;
-            
-            gT = state.transacciones.filter(t => t.tipo==='gasto').reduce((a, b) => a + b.monto, 0); 
-            iT = state.transacciones.filter(t => t.tipo==='ingreso').reduce((a, b) => a + b.monto, 0);
-            
-            document.getElementById('homeIngresos').innerText = `$${iT.toLocaleString()}`; 
-            document.getElementById('homeGastos').innerText = `$${gT.toLocaleString()}`;
-
-            let hG = "", hI = "";
-            state.transacciones.slice().reverse().forEach(t => {
-                const btnEdit = `<button class="edit-btn" onclick="${t.tipo === 'gasto' ? `editGasto('${t.firebaseId}')` : `editIngreso('${t.firebaseId}')`}">✎</button>`;
-                const btnDel = `<button class="del-btn" onclick="eliminarTransaccion('${t.firebaseId}', '${t.tipo}')" style="margin-right:10px;">🗑️</button>`;
-                const item = `<div class="bank-item"><div>${t.desc}<br><small>${t.fecha}</small></div><div style="display:flex; align-items:center;">${btnDel}${btnEdit}<b>$${t.monto.toLocaleString()}</b></div></div>`;
-                if(t.tipo === 'gasto') hG += item; else hI += item;
-            });
-            
-            document.getElementById('listaGastos').innerHTML = hG; 
-            document.getElementById('listaIngresos').innerHTML = hI;
-            
-            actualizarSelects(); 
-            renderChart(gT);
-        }
-
-        function actualizarSelects() {
-            const optDeb = state.cuentas.filter(c => c.tipo==='debito').map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
-            const optCre = state.cuentas.filter(c => c.tipo==='credito').map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
-            const optAll = state.cuentas.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
-            
-            document.getElementById('inCuenta').innerHTML = optDeb; 
-            document.getElementById('gaFuente').innerHTML = optAll; 
-            document.getElementById('pagoOrigen').innerHTML = optDeb; 
-            document.getElementById('pagoDestino').innerHTML = optCre; 
-            document.getElementById('trOrigen').innerHTML = optDeb; 
-            document.getElementById('trDestino').innerHTML = optDeb;
-        }
-
-        // UTILIDADES Y PERFIL
-        function handleNuevaCuenta(e) { 
-            e.preventDefault(); 
-            const id=Date.now(); 
-            const b=document.getElementById('cuBanco').value; 
-            db.ref(`Usuarios/${auth.currentUser.uid}/cuentas/${id}`).set({id, nombre:document.getElementById('cuNombre').value, banco:b, tipo:document.getElementById('cuTipo').value, saldo:parseFloat(document.getElementById('cuSaldo').value), icon:getBankLogo(b), diaPago:parseInt(document.getElementById('cuPago').value)||0}); 
-            e.target.reset(); 
-        }
-        
-        function handleGuardarPerfil(e) { 
-            e.preventDefault(); 
-            db.ref(`Usuarios/${auth.currentUser.uid}/perfil`).set({ nombre: document.getElementById('perfNombre').value, foto: state.currentBase64 || document.getElementById('perfDisplayFoto').src, color: state.selectedColor }).then(() => { alert("Perfil actualizado"); cambiarTab('resumen'); }); 
-        }
-        
-        function toggleTheme() { 
-            const t = document.body.getAttribute('data-theme')==='dark'?'light':'dark'; 
-            document.body.setAttribute('data-theme', t); 
-        }
-        
-        function toggleCamposTDC(v) { 
-            document.getElementById('camposTDC').style.display = v==='credito'?'block':'none'; 
-        }
-        
-        if(document.getElementById('perfFile')) { 
-            document.getElementById('perfFile').addEventListener('change', function(e) { 
-                const reader = new FileReader(); 
-                reader.onload = function() { state.currentBase64 = reader.result; document.getElementById('perfDisplayFoto').src = reader.result; }; 
-                if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]); 
-            }); 
-        }
-
-        function renderChart(total) { 
-            const ctx = document.getElementById('chartGastos').getContext('2d'); 
-            const cats = {}; 
-            state.transacciones.filter(t => t.tipo === 'gasto').forEach(t => cats[t.cat] = (cats[t.cat] || 0) + t.monto); 
-            if(chartInstance) chartInstance.destroy(); 
-            chartInstance = new Chart(ctx, { type:'doughnut', data:{ labels:Object.keys(cats), datasets:[{data:Object.values(cats), backgroundColor:['#3b82f6','#10b981','#ef4444','#8b5cf6'], borderWidth:0}] }, options:{ maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'75%' } }); 
-        }
-        
-        // PWA SERVICE WORKER
-        if ('serviceWorker' in navigator) { 
-            navigator.serviceWorker.register('sw.js'); 
-        }
-    </script>
-</body>
-</html>
-
-
-    
+    <script src="app.js"></script>
 </body>
 </html>
