@@ -184,4 +184,87 @@ function handleGuardarPerfil(e) { e.preventDefault(); db.ref(`Usuarios/${auth.cu
 function toggleTheme() { const t = document.body.getAttribute('data-theme')==='dark'?'light':'dark'; document.body.setAttribute('data-theme', t); }
 if(document.getElementById('perfFile')) document.getElementById('perfFile').addEventListener('change', function(e) { const r = new FileReader(); r.onload = function() { state.currentBase64 = r.result; document.getElementById('perfDisplayFoto').src = r.result; }; if(e.target.files[0]) r.readAsDataURL(e.target.files[0]); });
 function renderChart(total) { const ctx = document.getElementById('chartGastos').getContext('2d'); const cats = {}; state.transacciones.filter(t => t.tipo === 'gasto').forEach(t => cats[t.cat] = (cats[t.cat] || 0) + t.monto); if(chartInstance) chartInstance.destroy(); chartInstance = new Chart(ctx, { type:'doughnut', data:{ labels:Object.keys(cats), datasets:[{data:Object.values(cats), backgroundColor:['#3b82f6','#10b981','#ef4444','#8b5cf6'], borderWidth:0}] }, options:{ maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'75%' } }); }
+// 11. GENERADOR DE PDF MENSUAL
+function generarPDFMes() {
+    if (!window.jspdf) {
+        alert("Las librerías del PDF aún están cargando. Intenta de nuevo en unos segundos.");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = (hoy.getMonth() + 1).toString().padStart(2, '0');
+    const prefijoMes = `${year}-${month}`;
+    const nombreMes = hoy.toLocaleString('es-ES', { month: 'long' }).toUpperCase();
+
+    const txMes = state.transacciones.filter(t => t.fecha.startsWith(prefijoMes));
+    let ingMes = 0, gasMes = 0;
+    
+    txMes.forEach(t => {
+        if (t.tipo === 'ingreso') ingMes += t.monto;
+        if (t.tipo === 'gasto' || t.tipo === 'movimiento') gasMes += t.monto;
+    });
+
+    const colorPrimario = [59, 130, 246];
+    
+    doc.setFontSize(22);
+    doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
+    doc.text("ESTADO DE CUENTA MENSUAL", 105, 20, { align: "center" });
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Período: ${nombreMes} ${year}`, 14, 30);
+    doc.text(`Usuario: ${document.getElementById('perfDisplayNombre').innerText}`, 14, 36);
+    doc.text(`Fecha de emisión: ${hoy.toLocaleDateString()}`, 14, 42);
+
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Resumen Financiero", 14, 55);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(16, 185, 129);
+    doc.text(`+ Ingresos Totales: $${ingMes.toLocaleString()}`, 14, 63);
+    doc.setTextColor(239, 68, 68);
+    doc.text(`- Gastos/Movs Totales: $${gasMes.toLocaleString()}`, 14, 70);
+
+    let yPos = 85;
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Saldos Actuales", 14, yPos);
+    yPos += 5;
+
+    const cuentasData = state.cuentas.map(c => [c.nombre, c.banco, c.tipo.toUpperCase(), `$${c.saldo.toLocaleString()}`]);
+    doc.autoTable({
+        startY: yPos,
+        head: [['Nombre', 'Institución', 'Tipo', 'Saldo']],
+        body: cuentasData,
+        theme: 'grid',
+        headStyles: { fillColor: colorPrimario }
+    });
+
+    yPos = doc.lastAutoTable.finalY + 15;
+    doc.setFontSize(14);
+    doc.text(`Detalle de Movimientos`, 14, yPos);
+    yPos += 5;
+
+    const movsData = txMes.map(t => {
+        let tipoDisplay = t.tipo.toUpperCase();
+        if(t.tipo === 'movimiento') tipoDisplay = t.subtipo === 'pago' ? 'PAGO TDC' : 'TRASPASO';
+        return [t.fecha, tipoDisplay, t.desc, `$${t.monto.toLocaleString()}`];
+    });
+
+    doc.autoTable({
+        startY: yPos,
+        head: [['Fecha', 'Tipo', 'Concepto', 'Monto']],
+        body: movsData,
+        theme: 'striped',
+        headStyles: { fillColor: colorPrimario }
+    });
+
+    doc.save(`Estado_Cuenta_${nombreMes}_${year}.pdf`);
+}
+
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
