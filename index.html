@@ -162,7 +162,17 @@
                     </form>
                 </div>
 
-                <div class="card danger-zone">
+                <div class="card" style="margin-top: 20px;">
+                    <h3>Respaldo de Datos</h3>
+                    <p style="font-size:12px; color:var(--muted); margin: 10px 0;">Descarga un archivo con toda tu información o restaura una copia anterior.</p>
+                    <button onclick="exportarBackup()" class="btn-primary" style="margin-bottom: 15px;">⬇️ Descargar Backup</button>
+                    <label for="importBackup" class="btn-ghost" style="display:block; text-align:center; background:var(--bg); border: 1px dashed var(--muted); padding:15px; border-radius:15px; cursor:pointer; font-weight: bold;">
+                        ⬆️ Restaurar desde archivo
+                    </label>
+                    <input type="file" id="importBackup" accept=".json" style="display:none;" onchange="importarBackup(event)">
+                </div>
+
+                <div class="card danger-zone" style="margin-top: 20px;">
                     <h3 style="color:var(--danger)">Zona de Peligro</h3>
                     <p style="font-size:12px; color:var(--muted); margin: 10px 0;">Estas acciones son irreversibles.</p>
                     <button onclick="resetearCuenta()" class="btn-outline-danger">Reiniciar Saldos (Dejar en $0)</button>
