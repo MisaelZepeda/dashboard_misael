@@ -184,87 +184,238 @@ function handleGuardarPerfil(e) { e.preventDefault(); db.ref(`Usuarios/${auth.cu
 function toggleTheme() { const t = document.body.getAttribute('data-theme')==='dark'?'light':'dark'; document.body.setAttribute('data-theme', t); }
 if(document.getElementById('perfFile')) document.getElementById('perfFile').addEventListener('change', function(e) { const r = new FileReader(); r.onload = function() { state.currentBase64 = r.result; document.getElementById('perfDisplayFoto').src = r.result; }; if(e.target.files[0]) r.readAsDataURL(e.target.files[0]); });
 function renderChart(total) { const ctx = document.getElementById('chartGastos').getContext('2d'); const cats = {}; state.transacciones.filter(t => t.tipo === 'gasto').forEach(t => cats[t.cat] = (cats[t.cat] || 0) + t.monto); if(chartInstance) chartInstance.destroy(); chartInstance = new Chart(ctx, { type:'doughnut', data:{ labels:Object.keys(cats), datasets:[{data:Object.values(cats), backgroundColor:['#3b82f6','#10b981','#ef4444','#8b5cf6'], borderWidth:0}] }, options:{ maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'75%' } }); }
-// 11. GENERADOR DE PDF MENSUAL
-function generarPDFMes() {
-    if (!window.jspdf) {
-        alert("Las librerías del PDF aún están cargando. Intenta de nuevo en unos segundos.");
-        return;
-    }
+// 11. GENERADOR DE PDF MENSUAL ESTILIZADO PRO
+async function generarPDFMes() {
+    if (!window.jspdf) { alert("Cargando librerías..."); return; }
+    
+    // Mostrar loader interno para PDFs largos
+    if(document.getElementById('loader')) document.getElementById('loader').style.display = 'flex';
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
+    const doc = new jsPDF({ putOnlyUsedFonts: true, orientation: "portrait" });
+    
+    // --- DATOS Y CONFIGURACIÓN ---
     const hoy = new Date();
     const year = hoy.getFullYear();
-    const month = (hoy.getMonth() + 1).toString().padStart(2, '0');
-    const prefijoMes = `${year}-${month}`;
     const nombreMes = hoy.toLocaleString('es-ES', { month: 'long' }).toUpperCase();
+    const prefijoMes = `${year}-${(hoy.getMonth() + 1).toString().padStart(2, '0')}`;
+    
+    // User data
+    const userName = document.getElementById('perfDisplayNombre').innerText;
+    const userPhotoBase64 = document.getElementById('perfDisplayFoto').src; // DataURL base64
+    
+    // Colores del Perfil (obtenidos de las variables CSS)
+    const estiloBody = getComputedStyle(document.body);
+    const colorPrimarioHex = estiloBody.getPropertyValue('--primary').trim();
+    
+    // Convertidor HEX a RGB para jsPDF
+    const hexToRgb = (hex) => {
+        var c = hex.substring(1).split('');
+        if(c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+        c = '0x' + c.join('');
+        return [(c>>16)&255, (c>>8)&255, c&255];
+    };
+    const rgbPrimario = hexToRgb(colorPrimarioHex);
 
+    // Filtrar transacciones del mes
     const txMes = state.transacciones.filter(t => t.fecha.startsWith(prefijoMes));
     let ingMes = 0, gasMes = 0;
-    
-    txMes.forEach(t => {
-        if (t.tipo === 'ingreso') ingMes += t.monto;
-        if (t.tipo === 'gasto' || t.tipo === 'movimiento') gasMes += t.monto;
-    });
+    txMes.forEach(t => { if (t.tipo === 'ingreso') ingMes += t.monto; else gasMes += t.monto; });
 
-    const colorPrimario = [59, 130, 246];
+    // --- HELPER: CARGAR IMÁGENES ASÍNCRONAS ---
+    const cargarImagen = (url) => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.src = url;
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null); // Manejo de error sutil
+        });
+    };
+
+    // --- DISEÑO DE PÁGINA (HEADER Y FOOTER) ---
+    const totalPagesExp = "{total_pages_count}";
     
-    doc.setFontSize(22);
-    doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    doc.text("ESTADO DE CUENTA MENSUAL", 105, 20, { align: "center" });
+    const agregarEstiloPagina = (doc, colorRGB, nombre, foto) => {
+        // BANNER ENCABEZADO FIJO
+        doc.setFillColor(colorRGB[0], colorRGB[1], colorRGB[2]);
+        doc.rect(0, 0, 210, 40, 'F'); // Franja de 40mm alto
+        
+        // Foto de perfil redonda (requiere truco de recorte o imagen pre-redondeada)
+        // jsPDF no recorta nativamente en círculo fácil, asumimos DataURL cuadrado/redondo.
+        try {
+            if(foto && foto.startsWith('data:image')) {
+                doc.addImage(foto, 'PNG', 15, 8, 24, 24); // x, y, w, h
+            }
+        } catch(e) { console.log("Error añadiendo foto:", e); }
+
+        // Texto Encabezado
+        doc.setTextColor(255, 255, 255); // Blanco
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.text("ESTADO DE CUENTA MÓVIL", 45, 15);
+        
+        doc.setFontSize(20);
+        doc.setFont(undefined, 'bold');
+        doc.text(nombre.toUpperCase(), 45, 23);
+        
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Período reportado: ${nombreMes} ${year}`, 45, 30);
+
+        // PIE DE PÁGINA FIJO
+        const pageHeight = doc.internal.pageSize.height;
+        doc.setFillColor(colorRGB[0], colorRGB[1], colorRGB[2]);
+        doc.rect(0, pageHeight - 15, 210, 15, 'F'); // Franja 15mm alto
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.text(`Generado por Dashboard Pro el ${hoy.toLocaleDateString()} a las ${hoy.toLocaleTimeString()}`, 15, pageHeight - 6);
+        
+        // Numeración de página (se actualizará al final)
+        let pageStr = `Página ${doc.internal.getNumberOfPages()}`;
+        doc.text(pageStr, 195, pageHeight - 6, { align: 'right' });
+    };
+
+    // --- INICIAR DIBUJO ---
+    // Agregamos estilo a la primera página manualmente
+    agregarEstiloPagina(doc, rgbPrimario, userName, userPhotoBase64);
+
+    // 1. Sección Resumen Financiero
+    let yPos = 55;
+    doc.setTextColor(0);
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text("RESUMEN GENERAL DEL MES", 15, yPos);
     
     doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Período: ${nombreMes} ${year}`, 14, 30);
-    doc.text(`Usuario: ${document.getElementById('perfDisplayNombre').innerText}`, 14, 36);
-    doc.text(`Fecha de emisión: ${hoy.toLocaleDateString()}`, 14, 42);
-
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("Resumen Financiero", 14, 55);
+    doc.setFont(undefined, 'normal');
     
-    doc.setFontSize(12);
-    doc.setTextColor(16, 185, 129);
-    doc.text(`+ Ingresos Totales: $${ingMes.toLocaleString()}`, 14, 63);
-    doc.setTextColor(239, 68, 68);
-    doc.text(`- Gastos/Movs Totales: $${gasMes.toLocaleString()}`, 14, 70);
+    // Caja de Ingresos
+    doc.setFillColor(240, 253, 244); // Fondo verde muy tenue
+    doc.roundedRect(15, yPos + 5, 85, 20, 3, 3, 'F');
+    doc.setTextColor(16, 185, 129); // Texto Verde
+    doc.setFont(undefined, 'bold');
+    doc.text("TOTAL INGRESOS", 20, yPos + 12);
+    doc.setFontSize(16);
+    doc.text(`$${ingMes.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 20, yPos + 20);
 
-    let yPos = 85;
-    doc.setFontSize(14);
+    // Caja de Gastos
+    doc.setFillColor(254, 242, 242); // Fondo rojo muy tenue
+    doc.roundedRect(110, yPos + 5, 85, 20, 3, 3, 'F');
+    doc.setTextColor(239, 68, 68); // Texto Rojo
+    doc.setFontSize(11);
+    doc.text("TOTAL GASTOS Y MOVS", 115, yPos + 12);
+    doc.setFontSize(16);
+    doc.text(`$${gasMes.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 115, yPos + 20);
+
+    // 2. Tabla de Cuentas (CON LOGOS)
+    yPos = yPos + 40;
     doc.setTextColor(0);
-    doc.text("Saldos Actuales", 14, yPos);
-    yPos += 5;
-
-    const cuentasData = state.cuentas.map(c => [c.nombre, c.banco, c.tipo.toUpperCase(), `$${c.saldo.toLocaleString()}`]);
-    doc.autoTable({
-        startY: yPos,
-        head: [['Nombre', 'Institución', 'Tipo', 'Saldo']],
-        body: cuentasData,
-        theme: 'grid',
-        headStyles: { fillColor: colorPrimario }
-    });
-
-    yPos = doc.lastAutoTable.finalY + 15;
     doc.setFontSize(14);
-    doc.text(`Detalle de Movimientos`, 14, yPos);
+    doc.setFont(undefined, 'bold');
+    doc.text("SALDOS ACTUALES POR INSTITUCIÓN", 15, yPos);
     yPos += 5;
 
-    const movsData = txMes.map(t => {
-        let tipoDisplay = t.tipo.toUpperCase();
-        if(t.tipo === 'movimiento') tipoDisplay = t.subtipo === 'pago' ? 'PAGO TDC' : 'TRASPASO';
-        return [t.fecha, tipoDisplay, t.desc, `$${t.monto.toLocaleString()}`];
+    // Preparar datos de cuentas cargando los logos
+    const bodyCuentas = [];
+    for (const c of state.cuentas) {
+        // Intentamos cargar el logo (asumimos que c.icon es una URL DataURL o externa accesible)
+        let imgData = null;
+        try {
+            if(c.icon && c.icon.startsWith('data:image')) {
+                imgData = c.icon; // Ya es base64
+            }
+        } catch(e){}
+
+        bodyCuentas.push([
+            { content: '', image: imgData }, // Celda vacía para la imagen (se dibuja en hook)
+            c.nombre,
+            c.banco.toUpperCase(),
+            c.tipo.toUpperCase(),
+            `$${c.saldo.toLocaleString('es-MX', {minimumFractionDigits: 2})}`
+        ]);
+    }
+
+    doc.autoTable({
+        startY: yPos,
+        head: [[ {content: 'Logo', styles: {halign: 'center'}}, 'Cuenta', 'Banco', 'Tipo', 'Saldo']],
+        body: bodyCuentas,
+        theme: 'striped',
+        headStyles: { fillColor: rgbPrimario, textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { valign: 'middle', fontSize: 9 },
+        columnStyles: { 
+            0: { cellWidth: 15, halign: 'center' }, // Columna logo
+            4: { halign: 'right', fontStyle: 'bold' } // Columna Saldo
+        },
+        // Hook para dibujar los logos de los bancos dentro de las celdas
+        didDrawCell: (data) => {
+            if (data.section === 'body' && data.column.index === 0 && data.cell.raw.image) {
+                try {
+                    doc.addImage(data.cell.raw.image, 'PNG', data.cell.x + 2.5, data.cell.y + 2.5, 10, 10);
+                } catch(e){}
+            }
+        },
+        margin: { top: 45, bottom: 20 } // Márgenes para respetar header/footer en saltos
+    });
+
+    // 3. Tabla Detalle de Movimientos del Mes
+    yPos = doc.lastAutoTable.finalY + 15;
+    
+    // Verificar si cabe el título en la página actual
+    if(yPos > doc.internal.pageSize.height - 40) { doc.addPage(); yPos = 55; }
+
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text(`DETALLE DE MOVIMIENTOS - ${nombreMes}`, 15, yPos);
+    yPos += 5;
+
+    const bodyMovs = txMes.map(t => {
+        let catDisplay = t.cat || 'Ingreso';
+        if(t.tipo === 'movimiento') catDisplay = t.subtipo === 'pago' ? 'PAGO TDC' : 'TRASPASO';
+        
+        const esIngreso = t.tipo === 'ingreso';
+
+        return [
+            t.fecha,
+            catDisplay.toUpperCase(),
+            t.desc,
+            { 
+                content: `${esIngreso ? '+' : '-'} $${t.monto.toLocaleString('es-MX', {minimumFractionDigits: 2})}`,
+                styles: { textColor: esIngreso ? [16, 185, 129] : [239, 68, 68], fontStyle: 'bold' }
+            }
+        ];
     });
 
     doc.autoTable({
         startY: yPos,
-        head: [['Fecha', 'Tipo', 'Concepto', 'Monto']],
-        body: movsData,
-        theme: 'striped',
-        headStyles: { fillColor: colorPrimario }
+        head: [['Fecha', 'Categoría', 'Concepto', 'Monto']],
+        body: bodyMovs,
+        theme: 'grid',
+        headStyles: { fillColor: rgbPrimario, textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { valign: 'middle', fontSize: 8 },
+        columnStyles: { 3: { halign: 'right' } },
+        margin: { top: 45, bottom: 20 },
+        // Hook para agregar header/footer en páginas nuevas automáticamente
+        addPageContent: (data) => {
+             agregarEstiloPagina(doc, rgbPrimario, userName, userPhotoBase64);
+        }
     });
 
-    doc.save(`Estado_Cuenta_${nombreMes}_${year}.pdf`);
+    // Re-aplicar estilos a TODAS las páginas (necesario por cómo funciona AutoTable)
+    const pageCount = doc.internal.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        agregarEstiloPagina(doc, rgbPrimario, userName, userPhotoBase64);
+    }
+
+    // --- GUARDAR ---
+    const nombreArchivo = `EstadoCuenta_${userName.replace(/\s+/g, '_')}_${nombreMes}_${year}.pdf`;
+    doc.save(nombreArchivo);
+    
+    // Ocultar loader
+    if(document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
 }
+
 
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
