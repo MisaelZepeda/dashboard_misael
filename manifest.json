@@ -1,18 +1,19 @@
 {
   "name": "Dashboard Pro",
   "short_name": "DashPro",
-  "description": "Mi aplicación financiera",
-  "start_url": "index.html",
+  "description": "App Financiera",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#3b82f6",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon.png",
-      "sizes": "512x512",
+      "src": "./icon.png",
+      "sizes": "192x192 512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
