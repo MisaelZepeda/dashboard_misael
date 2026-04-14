@@ -31,12 +31,17 @@
                     <button onclick="toggleAuthForm('register')" class="btn-ghost">¿No tienes cuenta? Regístrate</button>
                 </div>
             </div>
+            
             <div id="registerForm" style="display:none;">
+                <input type="text" id="regNombre" placeholder="Tu Nombre Completo" required>
+                <label style="font-size:12px; color:var(--muted); display:block; text-align:left; margin-bottom:5px;">Foto de perfil (Opcional):</label>
+                <input type="file" id="regFoto" accept="image/*" style="margin-bottom: 15px;">
                 <input type="email" id="regEmail" placeholder="Nuevo Correo">
                 <input type="password" id="regPass" placeholder="Contraseña">
                 <button onclick="handleRegistro()" class="btn-primary">Crear Cuenta</button>
                 <button onclick="toggleAuthForm('login')" class="btn-ghost">Ya tengo cuenta. Volver.</button>
             </div>
+            
             <div id="resetForm" style="display:none;">
                 <p style="font-size:12px; color:var(--muted); text-align:center; margin-bottom:10px;">Enviaremos un enlace a tu correo.</p>
                 <input type="email" id="resetEmail" placeholder="Tu Correo">
