@@ -57,12 +57,28 @@ auth.onAuthStateChanged(user => {
 function toggleUserMenu(e) { e.stopPropagation(); document.getElementById('userMenu').classList.toggle('show'); }
 function closeDropdowns() { document.getElementById('userMenu').classList.remove('show'); }
 function cambiarTab(id, btn) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + id).classList.add('active'); if(btn) btn.classList.add('active'); closeDropdowns(); window.scrollTo(0,0);
-    currentEditId = null; document.querySelectorAll('form').forEach(f => f.reset());
-    ['inCuenta', 'gaFuente', 'movOrigen', 'movDestino'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).disabled = false; });
-    document.getElementById('ingresoFormTitle').innerText = "Nuevo Ingreso"; document.getElementById('gastoFormTitle').innerText = "Nuevo Gasto"; document.getElementById('movTitle').innerText = "Nuevo Movimiento";
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); 
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active'); 
+    if(btn) btn.classList.add('active'); 
+    closeDropdowns(); window.scrollTo(0,0);
+    
+    currentEditId = null; 
+    
+    // AQUÍ ESTÁ LA MAGIA: Resetea todo MENOS el perfil
+    document.querySelectorAll('form').forEach(f => { 
+        if(!f.closest('#tab-perfil')) f.reset(); 
+    });
+    
+    ['inCuenta', 'gaFuente', 'movOrigen', 'movDestino'].forEach(id => { 
+        if(document.getElementById(id)) document.getElementById(id).disabled = false; 
+    });
+    
+    if(document.getElementById('ingresoFormTitle')) document.getElementById('ingresoFormTitle').innerText = "Nuevo Ingreso"; 
+    if(document.getElementById('gastoFormTitle')) document.getElementById('gastoFormTitle').innerText = "Nuevo Gasto"; 
+    if(document.getElementById('movTitle')) document.getElementById('movTitle').innerText = "Nuevo Movimiento";
 }
+
 
 function revertirTransaccion(fid) {
     const t = state.transacciones.find(x => x.firebaseId === fid); if (!t) return {}; let updates = {};
