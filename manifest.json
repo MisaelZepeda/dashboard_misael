@@ -1,18 +1,18 @@
-const CACHE_NAME = 'dashpro-v1';
-
-// Instalación básica
-self.addEventListener('install', (e) => {
-  console.log('Service Worker instalado');
-});
-
-// Activación
-self.addEventListener('activate', (e) => {
-  console.log('Service Worker activo');
-});
-
-// Este evento es OBLIGATORIO para que sea PWA
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
-  );
-});
+{
+  "name": "Dashboard Pro",
+  "short_name": "DashPro",
+  "description": "Mi aplicación financiera",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
