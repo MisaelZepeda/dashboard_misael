@@ -41,17 +41,41 @@ function handleLogout() { auth.signOut().then(() => window.location.reload()); }
 // ESTADO EN TIEMPO REAL
 auth.onAuthStateChanged(user => {
     if (user) {
-        document.getElementById('loginScreen').style.display = 'none'; document.getElementById('appDashboard').style.display = 'block'; resetTimer();
+        document.getElementById('loginScreen').style.display = 'none'; 
+        document.getElementById('appDashboard').style.display = 'block'; 
+        
+        // 1. Mostrar pantalla de carga
+        if(document.getElementById('loader')) document.getElementById('loader').style.display = 'flex';
+        
+        resetTimer();
+        
         db.ref('Usuarios/' + user.uid).on('value', snap => {
-            const data = snap.val() || {}; state.cuentas = data.cuentas ? Object.values(data.cuentas) : []; state.transacciones = data.transacciones ? Object.entries(data.transacciones).map(([id, val]) => ({...val, firebaseId: id})) : [];
+            const data = snap.val() || {}; 
+            state.cuentas = data.cuentas ? Object.values(data.cuentas) : []; 
+            state.transacciones = data.transacciones ? Object.entries(data.transacciones).map(([id, val]) => ({...val, firebaseId: id})) : [];
             const p = data.perfil || { nombre: "Usuario", foto: "https://via.placeholder.com/100", color: "#3b82f6" };
-            state.selectedColor = p.color; document.documentElement.style.setProperty('--primary', p.color);
-            document.getElementById('headerGreeting').innerText = `Hola ${p.nombre} :)`; document.getElementById('headerFoto').src = p.foto; document.getElementById('perfDisplayNombre').innerText = p.nombre; document.getElementById('perfDisplayFoto').src = p.foto;
+            
+            state.selectedColor = p.color; 
+            document.documentElement.style.setProperty('--primary', p.color);
+            document.getElementById('headerGreeting').innerText = `Hola ${p.nombre} :)`; 
+            document.getElementById('headerFoto').src = p.foto; 
+            document.getElementById('perfDisplayNombre').innerText = p.nombre; 
+            document.getElementById('perfDisplayFoto').src = p.foto;
             if(document.getElementById('perfNombre')) document.getElementById('perfNombre').value = p.nombre;
+            
             renderAll();
+            
+            // 2. Ocultar pantalla de carga cuando todo esté listo
+            if(document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
         });
-    } else { document.getElementById('loginScreen').style.display = 'block'; document.getElementById('appDashboard').style.display = 'none'; clearTimeout(inactivityTimer); }
+    } else { 
+        document.getElementById('loginScreen').style.display = 'block'; 
+        document.getElementById('appDashboard').style.display = 'none'; 
+        if(document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
+        clearTimeout(inactivityTimer); 
+    }
 });
+
 
 // NAVEGACIÓN Y UI
 function toggleUserMenu(e) { e.stopPropagation(); document.getElementById('userMenu').classList.toggle('show'); }
